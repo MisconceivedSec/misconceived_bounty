@@ -31,13 +31,13 @@ function execute_script () {
 
     if [[ "$execute" = 'y' ]]; then
         if [[ $command_name = "github-subdomains" ]]; then
-            $command | grep -v "[-] error" | tee -a github_subdomains.txt
+            $command | grep -v "error occurred:" | tee -a github_subdomains.txt
             sleep 5
-            $command | grep -v "[-] error" | tee -a github_subdomains.txt
+            $command | grep -v "error occurred:" | tee -a github_subdomains.txt
             sleep 5
-            $command | grep -v "[-] error" | tee -a github_subdomains.txt
+            $command | grep -v "error occurred:" | tee -a github_subdomains.txt
             sleep 10
-            $command | grep -v "[-] error" | tee -a github_subdomains.txt
+            $command | grep -v "error occurred:" | tee -a github_subdomains.txt
         else
             $command
         fi
