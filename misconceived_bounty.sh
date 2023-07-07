@@ -31,13 +31,13 @@ function execute_script () {
 
     if [[ "$execute" = 'y' ]]; then
         if [[ $command_name = "github-subdomains" ]]; then
-            $command | tee -a github_subdomains.txt
+            $command | grep -v "[-] error" | tee -a github_subdomains.txt
             sleep 5
-            $command | tee -a github_subdomains.txt
+            $command | grep -v "[-] error" | tee -a github_subdomains.txt
             sleep 5
-            $command | tee -a github_subdomains.txt
+            $command | grep -v "[-] error" | tee -a github_subdomains.txt
             sleep 10
-            $command | tee -a github_subdomains.txt
+            $command | grep -v "[-] error" | tee -a github_subdomains.txt
         else
             $command
         fi
@@ -204,3 +204,4 @@ cat github_subdomains.txt subfinder.txt recursive.txt amass_passive.txt shuffled
 
 echo -e "\n[+] Running gowitness\n"
 gowitness file -f final_subdomains.txt --delay 1
+
