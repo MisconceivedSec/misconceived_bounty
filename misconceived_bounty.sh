@@ -172,7 +172,7 @@ echo ""
 echo "--------------------------> Subdomain Enumeration on \"$target\" <--------------------------"
 
 execute_script subfinder.txt "Subfinder" subfinder -d $target -o subfinder.txt -silent
-execute_script shuffledns.txt "ShuffleDNS" shuffledns -d $target -w $script_home/names.txt -r $script_home/resolvers-trusted.txt -o shuffledns.txt -silent
+execute_script shuffledns.txt "ShuffleDNS" shuffledns -d $target -w $script_home/names.txt -r $script_home/resolvers-community.txt -o shuffledns.txt -silent
 execute_script amass_passive.txt "Amass Passive" amass enum --passive -df subfinder_recursive.txt -o amass_passive.txt
 
 execute_script github_subdomains.txt "github-subdomains (1st attempt)" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
