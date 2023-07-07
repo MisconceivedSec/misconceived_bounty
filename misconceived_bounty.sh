@@ -31,13 +31,13 @@ function execute_script () {
 
     if [[ "$execute" = 'y' ]]; then
         if [[ $command_name = "github-subdomains" ]]; then
-            $command
+            $command | tee -a github_subdomains.txt
             sleep 5
-            $command
+            $command | tee -a github_subdomains.txt
             sleep 5
-            $command
+            $command | tee -a github_subdomains.txt
             sleep 10
-            $command
+            $command | tee -a github_subdomains.txt
         else
             $command
         fi
@@ -187,7 +187,7 @@ echo "--------------------------> Subdomain Enumeration on \"$target\" <--------
 execute_script subfinder.txt "Subfinder" subfinder -d $target -o subfinder.txt -silent
 execute_script shuffledns.txt "ShuffleDNS" shuffledns -d $target -w $script_home/names.txt -r $script_home/resolvers-community.txt -o shuffledns.txt -silent
 execute_script amass_passive.txt "Amass Passive" amass enum --passive -df subfinder_recursive.txt -o amass_passive.txt
-execute_script github_subdomains.txt "github-subdomains" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
+execute_script github_subdomains.txt "github-subdomains" github-subdomains -t $gh_token -d $target
 
 echo -e "\n[+] Combining Files\n"
 cat github_subdomains.txt subfinder.txt amass_passive.txt shuffledns.txt | sort -u > quarter_final.txt 
