@@ -19,15 +19,28 @@ function execute_script () {
 
     echo -e "\n[+] Running $command_name\n"
 
-    if [[ -f $output_file && ! "$command_name" = *"repeat"* ]]; then
-        choice=0
-        read -p "  ==> $command_name report exists, overwrite? [N/y]: " choice
-        if [[ "$choice" = 'y' ]]; then
-            rm $output_file
-            $command
+if [[ -f $output_file ]]; then
+    execute=""
+    read -p "  ==> $command_name report exists, overwrite? [N/y]: " execute
+        if [[ "$execute" = 'y' ]]; then
+            rm "$output_file"
         fi
     else
-        $command
+        execute='y'
+    fi
+
+    if [[ "$execute" = 'y' ]]; then
+        if [[ $command_name = "github-subdomains" ]]; then
+            $command
+            sleep 5
+            $command
+            sleep 5
+            $command
+            sleep 10
+            $command
+        else
+            $command
+        fi
     fi
 }
 
@@ -174,14 +187,7 @@ echo "--------------------------> Subdomain Enumeration on \"$target\" <--------
 execute_script subfinder.txt "Subfinder" subfinder -d $target -o subfinder.txt -silent
 execute_script shuffledns.txt "ShuffleDNS" shuffledns -d $target -w $script_home/names.txt -r $script_home/resolvers-community.txt -o shuffledns.txt -silent
 execute_script amass_passive.txt "Amass Passive" amass enum --passive -df subfinder_recursive.txt -o amass_passive.txt
-
-execute_script github_subdomains.txt "github-subdomains (1st attempt)" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
-sleep 5
-execute_script github_subdomains.txt "github-subdomains (2nd repeat)" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
-sleep 5
-execute_script github_subdomains.txt "github-subdomains (3rd repeat)" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
-sleep 10
-execute_script github_subdomains.txt "github-subdomains (4th repeat)" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
+execute_script github_subdomains.txt "github-subdomains" github-subdomains -t $gh_token -d $target | tee -a github_subdomains.txt
 
 echo -e "\n[+] Combining Files\n"
 cat github_subdomains.txt subfinder.txt amass_passive.txt shuffledns.txt | sort -u > quarter_final.txt 
