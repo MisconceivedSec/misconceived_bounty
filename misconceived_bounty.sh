@@ -19,12 +19,12 @@ function execute_script () {
 
     echo -e "\n[+] Running $command_name\n"
 
-if [[ -f $output_file ]]; then
-    execute=""
-    read -p "  ==> $command_name report exists, overwrite? [N/y]: " execute
-        if [[ "$execute" = 'y' ]]; then
-            rm "$output_file"
-        fi
+    if [[ -f $output_file ]]; then
+        execute=""
+        read -p "  ==> $command_name report exists, overwrite? [N/y]: " execute
+            if [[ "$execute" = 'y' ]]; then
+                rm "$output_file"
+            fi
     else
         execute='y'
     fi
