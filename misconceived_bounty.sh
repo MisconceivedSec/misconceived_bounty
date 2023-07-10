@@ -184,24 +184,24 @@ echo ""
 echo ""
 echo "--------------------------> Subdomain Enumeration on \"$target\" <--------------------------"
 
+execute_script crtsh.txt "crt.sh" crt.sh -t $target -o crtsh.txt
 execute_script subfinder.txt "Subfinder" subfinder -d $target -o subfinder.txt -silent
-execute_script shuffledns.txt "ShuffleDNS" shuffledns -d $target -w $script_home/names.txt -r $script_home/resolvers-community.txt -o shuffledns.txt -silent
-execute_script amass_passive.txt "Amass Passive" amass enum --passive -df subfinder_recursive.txt -o amass_passive.txt
+# execute_script shuffledns.txt "ShuffleDNS" shuffledns -d indeed.com -w $script_home/names.txt -l crtsh.txt -r $script_home/resolvers-community.txt
+execute_script amass_passive.txt "Amass Passive" amass enum --passive -df crtsh.txt -o amass_passive.txt
 execute_script github_subdomains.txt "github-subdomains" github-subdomains -t $gh_token -d $target
 
 echo -e "\n[+] Combining Files\n"
-cat github_subdomains.txt subfinder.txt amass_passive.txt shuffledns.txt | sort -u > quarter_final.txt 
+cat crtsh.txt github_subdomains.txt subfinder.txt amass_passive.txt | sort -u | httprobe > quarter_final.txt 
 
 execute_script recursive.txt "Subfinder Recursive" subfinder -recursive -list quarter_final.txt -o recursive.txt -silent
 
 echo -e "\n[+] Combining Files\n"
-cat github_subdomains.txt subfinder.txt recursive.txt amass_passive.txt shuffledns.txt | sort -u > semi_final.txt 
+cat recursive.txt quarter_final.txt | sort -u | httprobe > semi_final.txt 
 
 execute_script goaltdns.txt "GoAltDNS" goaltdns -l semi_final.txt -w $script_home/names.txt -o goaltdns.txt
 
 echo -e "\n[+] Combining & cleaning lists + httprobing them\n"
-cat github_subdomains.txt subfinder.txt recursive.txt amass_passive.txt shuffledns.txt goaltdns.txt | sort -u | grep -Ev "$exclude" | httprobe > final_subdomains.txt
+cat semi_final.txt goaltdns.txt | sort -u | grep -Ev "$exclude" | httprobe > final_subdomains.txt
 
 echo -e "\n[+] Running gowitness\n"
 gowitness file -f final_subdomains.txt --delay 1
-
