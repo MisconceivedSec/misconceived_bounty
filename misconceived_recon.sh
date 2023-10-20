@@ -2088,37 +2088,26 @@ check_dependencies
 flags "$@"
 
 case $mode in
-    init)
-        init
+    init) init
         ;;
-    config)
-        config
+    config) config
         ;;
-    report)
-        reports
+    report) reports
         ;;
-    recon)
-        func_wrapper recon "Complete Recon"
+    recon) func_wrapper recon "Complete Recon"
         ;;
-    subdomain)
-        func_wrapper subdomain_recon "Subdomain Recon"
+    subdomain) func_wrapper subdomain_recon "Subdomain Recon"
         ;;
-    screenshot)
-        func_wrapper subdomain_screenshot "Screenshots of Subdomains"
+    screenshot) func_wrapper subdomain_screenshot "Screenshots of Subdomains"
         ;;
-    deep)
-        func_wrapper deep_domain_recon "Deep Domain Recon"
+    deep) func_wrapper deep_domain_recon "Deep Domain Recon"
         ;;
-    leaks)
-        func_wrapper leaks "Leaks"
+    leaks) func_wrapper leaks "Leaks"
         ;;
-    gdork)
-        github_dorking_links
+    gdork) github_dorking_links
         ;;
-    test)
-        func_wrapper _test "Test"
+    test) func_wrapper _test "Test"
         ;;
-    *)
-        print_error "Invalid mode \"${mode}\"!"
+    *) print_error "Invalid mode \"${mode}\"!"
         ;;
 esac
