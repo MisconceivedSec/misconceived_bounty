@@ -41,7 +41,7 @@ I wrote this script because I wanted to have a script that will do three things 
 2. Will report back to me on Discord
 3. Is easy to debug
 
-So the script runs the chosen tasks, logs the output, and notifies me on reports.
+So the script runs the chosen tasks, logs the output, and notifies me on reports by sending a message to my Discord server.
 
 Main features:
 
@@ -50,6 +50,11 @@ Main features:
 - Checks for internet connection before running each task, and waits for the connection
 - Organizes reports according to their category
 - Logs tool output to ease debugging
+
+## Screenshots of some Discord integration
+- ![Category and Channel](https://github.com/MisconceivedSec/MisconceivedRecon/assets/79008923/25356cb0-da9a-4f49-b618-c441f9bec0b5)
+- ![Sample log messages](https://github.com/MisconceivedSec/MisconceivedRecon/assets/79008923/9ce97363-9c5b-4404-9311-ef275f162fbf)
+
 
 ## Usage:
 ```bash
@@ -101,7 +106,6 @@ Parse -h or -help with each mode/function for more information
 - [`waybackurls`](https://github.com/tomnomnom/waybackurls)
 - [`whois`](https://www.kali.org/tools/whois/)
 - [`xclip`](https://github.com/astrand/xclip)
-
 
 # Modes
 ## `init`
@@ -456,3 +460,4 @@ The `gdork` function generates github dorking links, copies them to the clipboar
 - [ ] Change the use of `file.old` to `/old/file.txt`
 - [ ] Add web technology fingerprinting to the `fingerprint` function
 - [ ] Add more `nuclei` vulnerability scans
+- [ ] Add a local registry that contains names of targets as well as their configuration files
