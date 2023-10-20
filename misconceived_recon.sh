@@ -14,537 +14,29 @@ italic=$'\e[3m'
 underline=$'\e[4m'
 reset=$'\e[0m'
 
-default_tasks=("subdomain" "screenshot" "services" "deep_domains" "leaks")
+default_tasks=("subdomain" "screenshot" "fingerprint" "deep_domains" "leaks")
+version="2.3"
 
-print_banner() {
-    echo '   __  ___ _                                _                __ ___                      '
-    echo '  /  |/  /(_)___ ____ ___   ___  ____ ___  (_)_  __ ___  ___/ // _ \ ___  ____ ___   ___ '
-    echo ' / /|_/ // /(_-</ __// _ \ / _ \/ __// -_)/ /| |/ // -_)/ _  // , _// -_)/ __// _ \ / _ \'
-    echo '/_/  /_//_//___/\__/ \___//_//_/\__/ \__//_/ |___/ \__/ \_,_//_/|_| \__/ \__/ \___//_//_/'
-    echo "                                                                        ${red}Mr. Misconception${reset}"
-}
+## Functions
 
 my_date() {
     date +%a\ %e\ %b\ %H:%M:%S\ %Y
 }
 
-## Flag Execution
-
-flags() {
-
-    [[ "$#" -eq 0 ]] && help
-
-    case $1 in
-        init)
-            mode="init"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -t|-target)
-                        shift
-                        if [[ "$1" ]]; then
-                            target="$1"
-                        else
-                            print_error "-t|-target requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -ght|-github-token)
-                        shift
-                        if [[ "$1" ]]; then
-                            ghtoken="$1"
-                        else
-                            print_error "-ght|-github-token requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -ghr|-github-recon)
-                        shift
-                        if [[ "$1" ]]; then
-                            github_recon="$1"
-                        else
-                            print_error "-ghr|-github-recon requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -glt|-gitlab-token)
-                        shift
-                        if [[ "$1" ]]; then
-                            gltoken="$1"
-                        else
-                            print_error "-glt|-gitlab-token requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -glr|-gitlab-recon)
-                        shift
-                        if [[ "$1" ]]; then
-                            gitlab_recon="$1"
-                        else
-                            print_error "-glr|-gitlab-recon requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -ws|-subdomain-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            subdomain_webhook="$1"
-                        else
-                            print_error "-ws|-subdomain-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wv|-service-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            service_webhook="$1"
-                        else
-                            print_error "-wv|-service-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wd|-deep-domain-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            deep_domain_webhook="$1"
-                        else
-                            print_error "-wd|-deep-domain-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wl|-leaks-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            leaks_webhook="$1"
-                        else
-                            print_error "-wl|-leaks-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wg|-logs-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            logs_webhook="$1"
-                        else
-                            print_error "-wg|-logs_webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wc|-screenshots-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            screenshot_webhook="$1"
-                        else
-                            print_error "-wc|-screenshots-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -b|-brute-wordlists)
-                        shift
-                        if [[ "$1" ]]; then
-                            input_brute_wordlist="$1"
-                        else
-                            print_error "-b|-brute-wordlist requires a wordlist file!"
-                        fi
-                        shift
-                        ;;
-                    -p|-path)
-                        shift
-                        if [[ "$1" && -d "$1" ]]; then
-                            path="$(realpath $1)"
-                        else
-                            print_error "-p|-path requires a valid path!"
-                        fi
-                        shift
-                        ;;
-                    -ct|-custom-tasks)
-                        shift
-                        if [[ "$1" ]]; then
-                            custom_task="$1"
-                        else
-                            print_error "-ct|-custom-tasks requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -d|-deep-domains)
-                        shift
-                        if [[ "$1" && -r "$2" ]]; then
-                            deep_domains+=("$1")
-                            fuzz_wordlist+=("$2")
-                        else
-                            print_error "-d|-deep-domains requires a domain and a valid path!!"
-                        fi
-                        shift 2
-                        ;;
-                    -h|-help)
-                        help init
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac        
-            done
-            ;;
-        config)
-            mode="config"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -t|-target)
-                        shift
-                        if [[ "$1" ]]; then
-                            target="$1"
-                        else
-                            print_error "-t|-target requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -d|-deep-domains)
-                        shift
-                        if [[ "$1" && -r "$2" ]]; then
-                            deep_domains+=("$1")
-                            fuzz_wordlist+=("$2")
-                        else
-                            print_error "-d|-deep-domains requires a domain and a valid path!"
-                        fi
-                        shift 2
-                        ;;
-                    -ght|-github-token)
-                        shift
-                        if [[ "$1" ]]; then
-                            ghtoken="$1"
-                        else
-                            print_error "-ght|-github-token requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -ghr|-github-recon)
-                        shift
-                        if [[ "$1" ]]; then
-                            github_recon="$1"
-                        else
-                            print_error "-ghr|-github-recon requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -glt|-gitlab-token)
-                        shift
-                        if [[ "$1" ]]; then
-                            gltoken="$1"
-                        else
-                            print_error "-glt|-gitlab-token requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -glr|-gitlab-recon)
-                        shift
-                        if [[ "$1" ]]; then
-                            gitlab_recon="$1"
-                        else
-                            print_error "-glr|-gitlab-recon requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -b|-brute-wordlist)
-                        shift
-                        if [[ "$1" ]]; then
-                            input_brute_wordlist="$1"
-                        else
-                            print_error "-b|-brute-wordlist requires a wordlist file!"
-                        fi
-                        shift
-                        ;;
-                    -a|-attack-method)
-                        shift
-                        if [[ "$1" ]]; then
-                            attack_method="$1"
-                        else
-                            print_error "-a|-attack-method requires a valid path!"
-                        fi
-                        shift
-                        ;;
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$(realpath $1)"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -ws|-subdomain-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            subdomain_webhook="$1"
-                        else
-                            print_error "-ws|-subdomain-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wv|-service-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            service_webhook="$1"
-                        else
-                            print_error "-wv|-service-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wd|-deep-domain-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            deep_domain_webhook="$1"
-                        else
-                            print_error "-wd|-deep-domain-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wl|-leaks-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            leaks_webhook="$1"
-                        else
-                            print_error "-wl|-leaks_webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wg|-logs-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            logs_webhook="$1"
-                        else
-                            print_error "-wg|-logs_webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -wc|-screenshots-webhook)
-                        shift
-                        if [[ "$1" ]]; then
-                            screenshot_webhook="$1"
-                        else
-                            print_error "-wc|-screenshots-webhook requires an argument!"
-                        fi
-                        shift
-                        ;;
-                    -n|-nano)
-                        nano_it='true'
-                        shift
-                        ;;
-                    -h|-help)
-                        help config
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac        
-            done
-            ;;    
-        recon)
-            mode="recon"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help recon
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        subdomain)
-            mode="subdomain"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help subdomain
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        screenshot)
-            mode="screenshot"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help screenshot
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        deep)
-            mode="deep"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help deep
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        leaks)
-            mode="leaks"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help leaks
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        gdork)
-            mode="gdork"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help gdork
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        test)
-            mode="test"
-            shift
-            while [[ "$1" != "" ]]; do
-                case $1 in
-                    -c|-config-file)
-                        shift
-                        if [[ -r "$1" ]]; then
-                            config_file="$1"
-                        else
-                            print_error "-c|-config-file requires a valid config file!"
-                        fi
-                        shift
-                        ;;
-                    -h|-help)
-                        help
-                        ;;
-                    -?*)
-                        print_error "Unknown option '$1'"
-                        ;;
-                    *)
-                        print_error "Missing options"
-                        ;;
-                esac
-                shift
-            done
-            ;;
-        help)
-            help
-            ;;
-        *)
-            print_error "Unknown option '$1'" no_exit
-            echo ""
-            help
-            ;;
-    esac
+print_banner() {
+    if [[ $(tput cols) -ge 90 ]]; then
+        echo '   __  ___ _                                _                __ ___                      '
+        echo '  /  |/  /(_)___ ____ ___   ___  ____ ___  (_)_  __ ___  ___/ // _ \ ___  ____ ___   ___ '
+        echo ' / /|_/ // /(_-</ __// _ \ / _ \/ __// -_)/ /| |/ // -_)/ _  // , _// -_)/ __// _ \ / _ \'
+        echo '/_/  /_//_//___/\__/ \___//_//_/\__/ \__//_/ |___/ \__/ \_,_//_/|_| \__/ \__/ \___//_//_/'
+        echo "                                                                       ${red}Mr. Misconception${reset}"
+    else
+        echo "   __  ___ ___"
+        echo "  /  |/  // _ \\  MisconceivedRecon"
+        echo " / /|_/ // , _/  ${red}Mr. Misconception${reset}"
+        echo "/_/  /_//_/|_|"
+    fi
 }
-## Functions
 
 print_info() {    
     [[ $mode ]] && print_sub "Mode: ${yellow}$mode${reset}"
@@ -562,9 +54,15 @@ print_message() {
     echo -e "${blue}=>>${reset}${bold} $1${reset} $2"
 }
 
+print_minor() {
+    echo -e "  ${red}-->${reset} $1"
+}
+
 print_task() {                   
+    echo ""
     echo -e "${red}=>>${reset}${bold} $1${reset} $2"
-    [[ $logs_webhook ]] && send_to_discord "    - *${1}*"
+    wait_for_internet
+    [[ $logs_webhook ]] && send_to_discord "- *${1}*" $logs_webhook
 }
 
 print_sub() {                   
@@ -583,9 +81,29 @@ print_warning() {
 
 print_announce() {
     start_date="$(my_date)"
-    
+
     print_green "$1" "${italic}${yellow}($start_date)${reset}"
+    wait_for_internet    
     send_to_discord "__**$1** ($start_date)__" $logs_webhook
+}
+
+prompt() {
+    read -p "   ${red}->${reset} $1 " userinput
+    echo ""
+}
+
+send_to_discord() {
+    message="$1"
+    webhook="$2"
+    upload_file="$3"
+
+    if [[ $webhook ]]; then
+        if [[ $upload_file ]]; then
+            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/eFlbVl2.jpg' --text "$message" --file "$upload_file"
+        else
+            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/eFlbVl2.jpg' --text "$message"
+        fi
+    fi
 }
 
 my_diff() {
@@ -607,23 +125,25 @@ my_diff() {
     fi
 }
 
-send_to_discord() {
-    message="$1"
-    webhook="$2"
-    upload_file="$3"
+wait_for_internet() {
+    server='1.1.1.1'
+    _ping=$(ping $server -c 1 2> /dev/null)
 
-    if [[ $webhook ]]; then
-        if [[ $upload_file ]]; then
-            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/eFlbVl2.jpg' --text "$message" --file "$upload_file"
-        else
-            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/eFlbVl2.jpg' --text "$message"
-        fi
+    if [[ "$_ping" = *"100% packet loss"* || ! "$_ping" ]]; then
+        print_warning "Can't connect to the internet - Waiting..."
+
+        while true; do
+            _ping=$(ping $server -c 1 2> /dev/null)
+            
+            if ! [[ "$_ping" = *"100% packet loss"* || ! "$_ping" ]]; then
+                break
+            fi
+
+            sleep 10
+        done
+
+        print_message "Connected!"
     fi
-}
-
-prompt() {
-    read -p "   ${red}->${reset} $1 " userinput
-    echo ""
 }
 
 help() {
@@ -634,22 +154,40 @@ help() {
         echo "${green}${bold}Usage:${reset} $0 ${cyan}init${reset} [OPTIONS]"
         echo ""
         echo "${green}${bold}Flags:${reset}"
-        echo "  ${magenta}${bold}-t -target${reset} domain                       ${bold}Mandatory:${reset} Target domain"
-        echo "  ${magenta}${bold}-b -brute-wordlists${reset} file[,file,...]     ${bold}Mandatory:${reset} Wordlist(s) for subdomain brute-forcing"
-        echo "  ${magenta}${bold}-ght -github-token${reset} token                ${bold}Mandatory:${reset} GitHub Token"
-        echo "  ${magenta}${bold}-ghr -github-recon${reset} url[,url,...]        GitHub Repos to enumerate"
-        echo "  ${magenta}${bold}-glt -gitlab-token${reset} token                GitLab Token"
-        echo "  ${magenta}${bold}-glr -gitlab-recon${reset} url[,url,...]        GitLab Repos to enumerate"
-        echo "  ${magenta}${bold}-p -path${reset} path                           Path to recon report directory"
-        echo "  ${magenta}${bold}-ct -custom-tasks${reset} task[,task,...]       Custom task sequence"
-        echo "  ${magenta}${bold}-d -deep-domains${reset} domain wordlist        Domains preform deep recon on"        
-        echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} url              Subdomain Webhook" 
-        echo "  ${magenta}${bold}-wc -screenshots-webhook${reset} url            Screenshots Webhook"        
-        echo "  ${magenta}${bold}-wv -service-webhook${reset} url                Service Webhook"        
-        echo "  ${magenta}${bold}-wd -deep-domain-webhook${reset} url            Deep Domain Webhook"        
-        echo "  ${magenta}${bold}-wl -leaks-webhook${reset} url                  Leaks Webhook"        
-        echo "  ${magenta}${bold}-wg -logs-webhook${reset} url                   Logs Webhook"            
-        echo "  ${magenta}${bold}-h -help${reset}                                ${bold}Standalone:${reset} Print this help message"
+        echo "  ${magenta}${bold}-t -target${reset} <domain>"
+        echo "         ${bold}Mandatory:${reset} Target domain"
+        echo "  ${magenta}${bold}-ght -github-token${reset} <token>"
+        echo "         ${bold}Mandatory:${reset} GitHub Access Token"
+        echo "  ${magenta}${bold}-sr -scope-regex${reset} <regex>"
+        echo "         Regex to filter for in-scope domains"
+        echo "  ${magenta}${bold}-b -brute-wordlists${reset} <file[,file,...]>"
+        echo "         Wordlist(s) for subdomain brute-forcing"
+        echo "  ${magenta}${bold}-ghr -github-recon${reset} <url[,url,...]>"
+        echo "         GitHub Repos to enumerate"
+        echo "  ${magenta}${bold}-glt -gitlab-token${reset} <token>"
+        echo "         GitLab Token"
+        echo "  ${magenta}${bold}-glr -gitlab-recon${reset} <url[,url,...]>"
+        echo "         GitLab Repos to enumerate"
+        echo "  ${magenta}${bold}-p -path${reset} <path>"
+        echo "         Path to recon report directory"
+        echo "  ${magenta}${bold}-ct -custom-tasks${reset} <task[,task,...]>"
+        echo "         Custom task sequence"
+        echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist>"
+        echo "         Domains preform to deep recon on"        
+        echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} <url>"
+        echo "         Subdomain Webhook" 
+        echo "  ${magenta}${bold}-wc -screenshots-webhook${reset} <url>"
+        echo "         Screenshots Webhook"        
+        echo "  ${magenta}${bold}-wf -fingerprint-webhook${reset} <url>"
+        echo "         Fingerprint/Services Webhook"        
+        echo "  ${magenta}${bold}-wd -deep-domain-webhook${reset} <url>"
+        echo "         Deep Domain Webhook"        
+        echo "  ${magenta}${bold}-wl -leaks-webhook${reset} <url>"
+        echo "         Leaks Webhook"        
+        echo "  ${magenta}${bold}-wg -logs-webhook${reset} <url>"
+        echo "         Logs Webhook"            
+        echo "  ${magenta}${bold}-h -help${reset}"
+        echo "         ${bold}Standalone:${reset} Print this help message"
         echo ""
         echo "(Must provide ${bold}all${reset} webhooks together, or ${bold}none${reset} at all)"
         echo ""
@@ -661,23 +199,42 @@ help() {
         echo "${green}${bold}Usage:${reset} $0 ${cyan}config${reset} [OPTIONS]"
         echo ""
         echo "${green}${bold}Flags:${reset}"
-        echo "  ${magenta}${bold}-c -config-file${reset} file                    ${bold}Mandatory:${reset} Configuration file for target"
-        echo "  ${magenta}${bold}-t -target${reset} domain                       Change target domain"
-        echo "  ${magenta}${bold}-b -brute-wordlists${reset} file[,file,...]     Add wordlist(s) for subdomain brute-forcing"
-        echo "  ${magenta}${bold}-ght -github-token${reset} token                Change GitHub Token"
-        echo "  ${magenta}${bold}-ghr -github-recon${reset} url[,url,...]        Add GitHub Repos to enumerate"
-        echo "  ${magenta}${bold}-glt -gitlab-token${reset} token                Change GitLab Token"
-        echo "  ${magenta}${bold}-glr -gitlab-recon${reset} url[,url,...]        Add GitLab Repos to enumerate"
-        echo "  ${magenta}${bold}-a -attack-method${reset} task[,task,...]       Change task sequence"
-        echo "  ${magenta}${bold}-d -deep-domains${reset} domain wordlist        Add domains for deep recon"        
-        echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} url              Change Subdomain Webhook"      
-        echo "  ${magenta}${bold}-wc -screenshots-webhook${reset} url            Change Screenshots Webhook"          
-        echo "  ${magenta}${bold}-wv -service-webhook${reset} url                Change Service Webhook"        
-        echo "  ${magenta}${bold}-wd -deep-domain-webhook${reset} url            Change Deep Domain Webhook"        
-        echo "  ${magenta}${bold}-wl -leaks-webhook${reset} url                  Change Leaks Webhook"        
-        echo "  ${magenta}${bold}-wg -logs-webhook${reset} url                   Change Logs Webhook"                   
-        echo "  ${magenta}${bold}-n -nano${reset}                                ${bold}Standalone:${reset} Edit the config file using nano"
-        echo "  ${magenta}${bold}-h -help${reset}                                ${bold}Standalone:${reset} Print this help message"
+        echo "  ${magenta}${bold}-c -config-file${reset} <file>"
+        echo "         ${bold}Mandatory:${reset} <Configuration file for target>"
+        echo "  ${magenta}${bold}-t -target${reset} <domain>"
+        echo "         Change target domain"
+        echo "  ${magenta}${bold}-sr -scope-regex${reset} <regex>"
+        echo "         Regex to filter for in-scope domains"
+        echo "  ${magenta}${bold}-b -brute-wordlists${reset} <file[,file,...]>"
+        echo "         Add wordlist(s) for subdomain brute-forcing"
+        echo "  ${magenta}${bold}-ght -github-token${reset} <token>"
+        echo "         Change GitHub Token"
+        echo "  ${magenta}${bold}-ghr -github-recon${reset} <url[,url,...]>"
+        echo "         Add GitHub Repos to enumerate"
+        echo "  ${magenta}${bold}-glt -gitlab-token${reset} <token>"
+        echo "         Change GitLab Token"
+        echo "  ${magenta}${bold}-glr -gitlab-recon${reset} <url[,url,...]>"
+        echo "         Add GitLab Repos to enumerate"
+        echo "  ${magenta}${bold}-a -attack-method${reset} <task[,task,...]>"
+        echo "         Change task sequence"
+        echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist>"
+        echo "         Add domains for deep recon"        
+        echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} <url>"
+        echo "         Change Subdomain Webhook"      
+        echo "  ${magenta}${bold}-wc -screenshots-webhook${reset} <url>"
+        echo "         Change Screenshots Webhook"  
+        echo "  ${magenta}${bold}-wf -fingerprint-webhook${reset} <url>"
+        echo "         Change Fingerprint/Service Webhook"     
+        echo "  ${magenta}${bold}-wd -deep-domain-webhook${reset} <url>"
+        echo "         Change Deep Domain Webhook"
+        echo "  ${magenta}${bold}-wl -leaks-webhook${reset} <url>"
+        echo "         Change Leaks Webhook"        
+        echo "  ${magenta}${bold}-wg -logs-webhook${reset} <url>"
+        echo "         Change Logs Webhook"
+        echo "  ${magenta}${bold}-m -manual [editor]${reset}"
+        echo "         ${bold}Standalone:${reset} Edit the config file manually (default editor 'nano')"
+        echo "  ${magenta}${bold}-h -help${reset}"
+        echo "         ${bold}Standalone:${reset} Print this help message"
         echo ""
         echo "${green}${bold}Available Recon Tasks:${reset}"
         for attack in ${default_tasks[*]}; do
@@ -687,23 +244,37 @@ help() {
         echo "${green}${bold}Usage:${reset} $0 ${cyan}recon${reset}|${cyan}subdomain${reset}|${cyan}screenshot${reset}|${cyan}fingerprint${reset}|${cyan}deep${reset}|${cyan}leaks${reset}|${cyan}gdork${reset} [OPTIONS]"
         echo ""
         echo "${green}${bold}Flags:${reset}"
-        echo "  ${magenta}${bold}-c -config-file${reset} file                    ${bold}Mandatory:${reset} Configuration file for target"
+        echo "  ${magenta}${bold}-c -config-file${reset} file"
+        echo "         ${bold}Mandatory:${reset} Configuration file for target"
+        echo ""
+    elif [[ $1 = "report" ]]; then
+        echo "${green}${bold}Usage:${reset} $0 report [OPTIONS]"
+        echo ""
+        echo "${green}${bold}Flags:${reset}"
+        echo "  ${magenta}${bold}-c -config-file${reset} <file>"
+        echo "         ${bold}Mandatory:${reset} Configuration file for target"
+        echo "  ${magenta}${bold}-r -report${reset} <report>"
+        echo "         Specify report"
+        echo "  ${magenta}${bold}-s -sub-report${reset} <sub-report>"
+        echo "         Specify sub-report"
         echo ""
     else
         echo "${green}${bold}Usage:${reset} $0 MODE [OPTIONS]"
+        echo "${green}${bold}Version:${reset} $version"
         echo ""
-        echo "${green}${bold}Main Modes:${reset}"
+        echo "${green}${bold}Modes:${reset}"
         echo "    ${cyan}help   ${yellow}=>${reset} Print this help message"
         echo "    ${cyan}init   ${yellow}=>${reset} Initiate configuration for recon on target"
         echo "    ${cyan}config ${yellow}=>${reset} Modify configuration of specific target"        
         echo "    ${cyan}recon  ${yellow}=>${reset} Run recon based on configuration file"
+        echo "    ${cyan}report ${yellow}=>${reset} Show reports and subreports of enumeration tasks"
         echo ""
-        echo "${green}${bold}Single Functions:${reset}"    
+        echo "${green}${bold}Functions:${reset}"    
         echo "    ${cyan}subdomain   ${yellow}=>${reset} Subdomain Recon"
         echo "    ${cyan}screenshot  ${yellow}=>${reset} Screenshots of Subdomains"
         echo "    ${cyan}fingerprint ${yellow}=>${reset} Fingerprint/Service Scan"
         echo "    ${cyan}deep        ${yellow}=>${reset} Deep Domain Recon"
-        echo "    ${cyan}leaks       ${yellow}=>${reset} Scan GiHub/GitLab (and other sites) repos for leaks"
+        echo "    ${cyan}leaks       ${yellow}=>${reset} Scan GiHub/GitLab repos for leaks"
         echo "    ${cyan}gdork       ${yellow}=>${reset} Generate GitHub Dorking Links"
         echo ""
         echo "Parse ${magenta}${bold}-h${reset} or ${magenta}${bold}-help${reset} with each mode/function for more information"
@@ -720,6 +291,10 @@ extract_url() {
 }
 
 github_dorking_links() {
+
+    init_vars
+    print_banner
+    print_info
 
     {
         echo "https://github.com/search?q=\"${target}\"+password&type=Code"
@@ -796,17 +371,17 @@ github_dorking_links() {
 
 subdomain_recon() {
 
-    print_announce "SUBDOMAIN ENUMERATION"
+    print_announce "Subdomain Enumeration"
     start_seconds=$SECONDS
 
     ## crt.sh
-
+ 
     print_task "Pulling down 'crt.sh' domains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/crt_sh.txt")"
     [[ -f $subdomain_dir/crt_sh.txt ]] && mv $subdomain_dir/crt_sh.txt $subdomain_dir/crt_sh.old
     [[ -f $subdomain_dir/crt_sh_wildcard.txt ]] && mv $subdomain_dir/crt_sh_wildcard.txt $subdomain_dir/crt_sh_wildcard.old
 
     crt.sh -t "$target" > $subdomain_dir/crt_temp.txt
-    cat $subdomain_dir/crt_temp.txt | grep -v '*' | probe | tee $subdomain_dir/crt_sh.txt
+    cat $subdomain_dir/crt_temp.txt | grep -v '*' | tee $subdomain_dir/crt_sh.txt
 
     print_message "crt.sh wildcard domains"
     grep '*' $subdomain_dir/crt_temp.txt | tee $subdomain_dir/crt_sh_wildcard.txt
@@ -821,7 +396,7 @@ subdomain_recon() {
     print_task "Running 'subfinder'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subfinder.txt")"
     [[ -f $subdomain_dir/subfinder.old ]] && mv $subdomain_dir/subfinder.old $subdomain_dir/subfinder.txt
 
-    subfinder -d "$target" -silent | sort -u | probe | tee $subdomain_dir/subfinder.txt
+    subfinder -d "$target" -o $subdomain_dir/subfinder.txt
 
     my_diff $subdomain_dir/subfinder.old $subdomain_dir/subfinder.txt "subfinder"
 
@@ -830,15 +405,15 @@ subdomain_recon() {
     print_task "Running 'github-subdomains.py'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/github_subdomains.txt")"
     [[ -f $subdomain_dir/github_subdomains.txt ]] && mv $subdomain_dir/github_subdomains.txt $subdomain_dir/github_subdomains.old
 
-    github-subdomains -t $ghtoken -d $target | grep -v "error occurred:" | tee $subdomain_dir/github_subdomain_unsorted.txt
+    github-subdomains -t $ghtoken -d $target | tee $subdomain_dir/github_subdomain_unsorted.txt
     sleep 6
-    github-subdomains -t $ghtoken -d $target | grep -v "error occurred:" | tee -a $subdomain_dir/github_subdomain_unsorted.txt
+    github-subdomains -t $ghtoken -d $target | tee -a $subdomain_dir/github_subdomain_unsorted.txt
     sleep 6
-    github-subdomains -t $ghtoken -d $target | grep -v "error occurred:" | tee -a $subdomain_dir/github_subdomain_unsorted.txt
+    github-subdomains -t $ghtoken -d $target | tee -a $subdomain_dir/github_subdomain_unsorted.txt
     sleep 10
-    github-subdomains -t $ghtoken -d $target | grep -v "error occurred:" | tee -a $subdomain_dir/github_subdomain_unsorted.txt
+    github-subdomains -t $ghtoken -d $target | tee -a $subdomain_dir/github_subdomain_unsorted.txt
 
-    sort -u $subdomain_dir/github_subdomain_unsorted.txt | probe > $subdomain_dir/github_subdomains.txt
+    sort -u $subdomain_dir/github_subdomain_unsorted.txt | grep -v "error occurred:" > $subdomain_dir/github_subdomains.txt
     rm $subdomain_dir/github_subdomain_unsorted.txt
 
     my_diff $subdomain_dir/github-subdomains.old $subdomain_dir/github-subdomains.txt "github-subdomains"
@@ -862,14 +437,17 @@ subdomain_recon() {
     print_task "Running 'gobuster' (brute-force)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/gobuster.txt")"
     [[ -f $subdomain_dir/gobuster.txt ]] && mv $subdomain_dir/gobuster.txt $subdomain_dir/gobuster.old
 
-    gobuster dns -d $target -w $brute_wordlist -zq --no-error --no-color | cut -d ' ' -f 2 | probe | tee $subdomain_dir/gobuster.txt
+    gobuster dns -d $target -w $brute_wordlist --no-color -o $subdomain_dir/temp_gobuster.txt 
 
+    cut -d ' ' -f 2 $subdomain_dir/temp_gobuster.txt | grep -v '^[[:space:]]*$' > $subdomain_dir/gobuster.txt
+    rm $subdomain_dir/temp_gobuster.txt
     
     my_diff $subdomain_dir/gobuster.old $subdomain_dir/gobuster.txt "gobuster"
 
     ## Combining Files
 
-    sort -u $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | extract_url > $subdomain_dir/combined_temp.txt
+    print_message "Temporary Combination"
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u > $subdomain_dir/combined_temp.txt
 
     ## Subdomainizer
 
@@ -885,38 +463,44 @@ subdomain_recon() {
     
     ## Combining Files
 
-    sort -u $subdomain_dir/combined_temp.txt $subdomain_dir/subdomainizer.txt > $subdomain_dir/combined_subdomains.txt
-    cat $subdomain_dir/combined_subdomains.txt | extract_url > $subdomain_dir/combined_subdomains_stripped.txt
-
+    print_message "Combining Temp Combination with Subdomainizer Report"
+    cat $subdomain_dir/combined_temp.txt $subdomain_dir/subdomainizer.txt | sort -u > $subdomain_dir/combined_subdomains.txt
     rm $subdomain_dir/combined_temp.txt
 
-    ## Subfinder recusive
+    ## Subfinder recursive
 
     print_task "Running 'subfinder recursive'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subfinder_recursive.txt")"
     [[ -f $subdomain_dir/subfinder_recursive.txt ]] && mv $subdomain_dir/subfinder_recursive.txt $subdomain_dir/subfinder_recursive.old
 
-    subfinder -recursive -list combined_subdomains_stripped.txt -silent | sort -u | probe | tee $subdomain_dir/subfinder_recursive.txt
+    subfinder -recursive -list $subdomain_dir/combined_subdomains.txt -o $subdomain_dir/subfinder_recursive.txt
 
     my_diff $subdomain_dir/subfinder_recursive.old $subdomain_dir/subfinder_recursive.txt "subfinder recursive"
 
     ## Combining Files
 
-    sort -u *_recursive.txt > combined_recursive.txt
-    cat combined_recursive.txt | extract_url > combined_recursive_stripped.txt
+    print_message "Recursive Combination"
+    cat $subdomain_dir/combined_subdomains.txt $subdomain_dir/subfinder_recursive.txt | sort -u > $subdomain_dir/combined_recursive.txt
 
     ## GoAltDNS
 
     print_task "Running 'goaltdns'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/goaltdns.txt")"
     [[ -f $subdomain_dir/goaltdns.txt ]] && mv $subdomain_dir/goaltdns.txt $subdomain_dir/goaltdns.old
     
-    goaltdns -l combined_recursive_stripped.txt -w $brute_wordlist | sort -u | probe | tee $subdomain_dir/goaltdns.txt
+    goaltdns -l $subdomain_dir/combined_recursive.txt -w $brute_wordlist -o $subdomain_dir/goaltdns.txt
 
     my_diff $subdomain_dir/goaltdns.old $subdomain_dir/goaltdns.txt "goaltdns"
 
-    ## Final Combanation
+    ## Final Combination
 
-    sort -u goaltdns.txt combined_recursive.txt > final_subdomains.txt
-    cat final_subdomains | extract_url > final_subdomains_stripped.txt
+    print_message "Final Combination..."
+    
+    ## Filter with scope regex if available
+    if [[ $scope_regex ]]; then
+        print_warning "Filtering out out-of-scope domains" 
+        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_subdomains.txt
+    else
+        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_subdomains.txt
+    fi
 
     ## New Subdomains
 
@@ -926,51 +510,95 @@ subdomain_recon() {
         cat $subdomain_dir/final_subdomains_stripped.txt > $subdomain_dir/new_subdomains.txt
     fi
 
+    ## Check for live subdomains
+
+    print_task "Running 'httprobe' (looking for live subdomains)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/live_subdomains.txt")"
+
+    cat $subdomain_dir/new_subdomains.txt | probe | tee "$subdomain_dir/live_subdomains.txt"
+
+    ## Count and output new subdomains
+
     new_subdomain_count=$(wc -l "$subdomain_dir/new_subdomains.txt" | cut -d ' ' -f 1)
+    live_subdomain_count=$(wc -l "$subdomain_dir/live_subdomains.txt" | cut -d ' ' -f 1)
 
     send_to_discord "Discovered \`$new_subdomain_count\` **NEW** subdomains:" $subdomain_webhook "$subdomain_dir/new_subdomains.txt" 
-    print_message "Discoverd $new_subdomain_count NEW subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/new_subdomains.txt")"
+    send_to_discord "Live subdomains (\`$live_subdomain_count\`):" $subdomain_webhook "$subdomain_dir/live_subdomains.txt" 
     
-    cat $subdomain_dir/new_subdomains.txt
+    print_message "Discoverd $new_subdomain_count NEW subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/new_subdomains.txt")"
+    print_message "Live subdomains ($live_subdomain_count):"
+    cat $subdomain_dir/live_subdomains.txt
 
-    ## Subdomain Takeovers
+    ## DNSReaper Subdomain Takeovers
 
     print_task "Running 'dnsreaper' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/dnsreaper-takeovers.json")"
     [[ -r "$subdomain_dir/dnsreaper-takeovers.json" ]] && mv "$subdomain_dir/dnsreaper-takeovers.json" "$subdomain_dir/dnsreaper-takeovers.old"
 
-    dnsreaper file --filename "$subdomain_dir/new_subdomains.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.old"
+    dnsreaper file --filename "$subdomain_dir/live_subdomains.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.txt"
 
-    my_diff "$subdomain_dir/dnsreaper-takeovers.old" "$subdomain_dir/dnsreaper-takeovers.json" $subdomain_webhook
+    if [[ -r "$subdomain_dir/dnsreaper-takeovers.old" ]]; then
+        my_diff "$subdomain_dir/dnsreaper-takeovers.old" "$subdomain_dir/dnsreaper-takeovers.json" "DNSReaper (subdomain takeovers)" $subdomain_webhook
+    elif [[ $(cat "$subdomain_dir/dnsreaper-takeovers.json") ]]; then
+        print_message "Report of:" "DNSReaper"
+        jq . "$subdomain_dir/dnsreaper-takeovers.json"
+        send_to_discord "DNSReaper report:\n\`\`\`json\n$(jq . "$subdomain_dir/dnsreaper-takeovers.json")\n\`\`\`" $subdomain_webhook "$subdomain_dir/dnsreaper-takeovers.json"
+    else
+        print_warning "No findings from DNSReaper"
+    fi
+    
+    ## Nuclei Subdomain Takeover
+
+    print_task "Running 'nuclei -tags takeover' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/nuclei_takeovers.txt")"
+    [[ -r "$subdomain_dir/nuclei_takeovers.txt" ]] && mv "$subdomain_dir/nuclei_takeovers.txt" "$subdomain_dir/nuclei_takeovers.old"
+
+    nuclei -tags takeover -l "$subdomain_dir/live_subdomains.txt" -o "$subdomain_dir/nuclei_takeovers.txt"
+
+    if [[ -r "$subdomain_dir/nuclei_takeovers.old" ]]; then
+        my_diff "$subdomain_dir/nuclei_takeovers.old" "$subdomain_dir/nuclei_takeovers.txt" "Nuclei (subdomain takeovers)" $subdomain_webhook
+    elif [[ $(cat "$subdomain_dir/nuclei_takeovers.txt") ]]; then
+        print_message "Report from:" "Nuclei (-tags takeovers)"
+        cat "$subdomain_dir/nuclei_takeovers.txt"
+        send_to_discord "Nuclei (-tags takeovers) report:\n\`\`\`\n$(cat "$subdomain_dir/nuclei_takeovers.txt")\n\`\`\`" $subdomain_webhook "$subdomain_dir/nuclei_takeovers.txt"
+    else
+        print_warning "No findings from Nuclei"
+    fi
 
     ## Time Taken
 
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
     execution_time=$(date -u -d @${execution_seconds} +"%T")
-    print_green "Completed Subdomain Recon: (Took ${yellow}$execution_time${reset})" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/final_subdomains.txt")"
-    send_to_discord "**Completed** __Subdomain Recon__ in \`$execution_time\`\n- *Found \`$new_subdomain_count\` new subdomains*" $logs_webhook
+    print_green "Completed Subdomain Recon" "(Took ${yellow}$execution_time${reset}) ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/")"
+    send_to_discord "**Completed** __Subdomain Recon__ in \`$execution_time\`\n- *Found \`$new_subdomain_count\` new subdomains (live: \`$live_subdomain_count\`)*" $logs_webhook
 }
 
 subdomain_screenshot() {
 
-    print_announce "TAKING SCREENSHOTS OF SUBDOMAINS"
+    print_announce "Taking Screenshots of Subdomains"
     start_seconds=$SECONDS
 
     ## Take The Screenshots
 
-    if [[ $(ls $screenshot_dir/*.png) ]]; then
-        mv $screenshot_dir/*.png $screenshot_dir/old/
-    fi
+    if [[ -f $subdomain_dir/live_subdomains.txt && $(cat $subdomain_dir/live_subdomains.txt) ]]; then
 
-    if [[ -f $subdomain_dir/new_subdomains.txt && $(cat $subdomain_dir/new_subdomains.txt) ]]; then
-        gowitness file -f $subdomain_dir/final_subdomains.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/
-        
+        screenshots=($(ls $screenshot_dir/*.png 2> /dev/null))
 
-        for screenshot in $screenshot_dir/*.png; do
-         print_message "Uploading Screenshot:" "$(basename $screenshot)"
-            url="$(basename $screenshot | sed -e "s/.png//g" -e "s/http-/http:\/\//g" -e "s/https-/https:\/\//g")"
-            send_to_discord "Screenshot of \`$url\`:" "$screenshot_webhook" "$screenshot"
+        [[ -r $screenshot_dir/gowitness_db.sqlite3 ]] && rm $screenshot_dir/gowitness_db.sqlite3
+
+        for screenshot in "${screesnhots[@]}"; do
+            mv $screenshot_dir/*.png $screenshot_dir/old/
         done
+
+        gowitness file -f $subdomain_dir/live_subdomains.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/gowitness_db.sqlite3
+        
+        screenshots=($(ls $screenshot_dir/*.png))
+
+        if [[ $screenshot_webhook ]]; then
+            for screenshot in "${screenshots[@]}"; do
+                print_message "Uploading Screenshot:" "$(basename $screenshot)"
+                url="$(basename $screenshot | sed -e "s/.png//g" -e "s/http-/http:\/\//g" -e "s/https-/https:\/\//g")"
+                send_to_discord "Screenshot of \`$url\`:" "$screenshot_webhook" "$screenshot"
+            done
+        fi  
     else
         print_warning "No New Subdomains Found"
     fi
@@ -980,13 +608,13 @@ subdomain_screenshot() {
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
     execution_time=$(date -u -d @${execution_seconds} +"%T")
-    print_green "Completed Screenshots of Subdomains (Took ${yellow}$execution_time${reset}${bold})" "${red}-->${reset} ./$(realpath --relative-to="." "$recon_dir/screenshots")"
-    send_to_discord "**Completed** __taking Screenshots of Subdomains__ in \`$execution_time\`" $logs_webhook
+    print_green "Completed Screenshots of Subdomains" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$recon_dir/screenshots")"
+    send_to_discord "**Completed** taking __Screenshots of Subdomains__ in \`$execution_time\`" $logs_webhook
 }
 
-services_recon() {
+fingerprint_recon() {
 
-    print_announce "FINGERPRINT/SERVICE SCANNING"
+    print_announce "Fingerprint/Service Scanning"
     start_seconds=$SECONDS
 
     if [[ -f $subdomain_dir/new_subdomains.txt && $(cat $subdomain_dir/new_subdomains.txt) ]]; then
@@ -1001,9 +629,9 @@ services_recon() {
             echo "\n\n\n"    
         done | tee $fingerprint_dir/new_whois_report.txt
 
-        if [[ $service_webhook ]]; then
+        if [[ $fingerprint_webhook ]]; then
             print_message "Uploading:" "Whois Reports..."
-            send_to_discord "**\`whois\`** report ($start_date)" $service_webhook "$fingerprint_dir/new_whois_report.txt"
+            send_to_discord "**\`whois\`** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_whois_report.txt"
         fi
 
         cat $fingerprint_dir/new_whois_report.txt >> $fingerprint_dir/whois_report.txt
@@ -1030,9 +658,9 @@ services_recon() {
             echo -e "\n\n"
         done | tee $fingerprint_dir/new_shodan_report.txt
 
-        if [[ $service_webhook ]]; then
+        if [[ $fingerprint_webhook ]]; then
             print_message "Uploading:" "Shodan Reports..."
-            send_to_discord "**Shodan** report ($start_date)" $service_webhook "$fingerprint_dir/new_shodan_report.txt"
+            send_to_discord "**Shodan** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_shodan_report.txt"
         fi
 
         cat $fingerprint_dir/new_shodan/report.txt >> $fingerprint_dir/shodan_report.txt
@@ -1046,9 +674,9 @@ services_recon() {
         sed '/#\ Nmap/d' nmap_scans_temp.txt | grep -v "Status: " > new_nmap_scans.txt
         rm nmap_scans_temp.txt
 
-        if [[ $service_webhook ]]; then
+        if [[ $fingerprint_webhook ]]; then
             print_message "Uploading:" "Nmap Scans..."
-            send_to_discord "**\`nmap\`** report ($start_date)" $service_webhook "$fingerprint_dir/new_nmap_scan.txt"
+            send_to_discord "**\`nmap\`** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_nmap_scan.txt"
         fi
 
         cat new_nmap_scans.txt >> nmap_scans.txt
@@ -1058,7 +686,7 @@ services_recon() {
         end_seconds=$SECONDS
         execution_seconds=$((end_seconds - start_seconds))
         execution_time=$(date -u -d @${execution_seconds} +"%T")
-        print_green "Completed Fingerprint/Service Scan of Subdomains (Took ${yellow}$execution_time${reset}${bold})" "${red}-->${reset} ./$(realpath --relative-to="." "$recon_dir/screenshots")" 
+        print_green "Completed Fingerprint/Service Scan of Subdomains" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$recon_dir/screenshots")" 
         send_to_discord "**Completed** __Fingerprint/Service scanning__ in \`$execution_time\`" $logs_webhook       
     else
         print_warning "No New Subdomains Found"
@@ -1067,7 +695,7 @@ services_recon() {
 
 deep_domain_recon() {
 
-    print_announce "DEEP DOMAIN RECON"
+    print_announce "Deep Domain Recon"
     start_seconds=$SECONDS
     
     if [[ "${deep_domains[*]}" ]]; then
@@ -1086,6 +714,8 @@ deep_domain_recon() {
         
             waybackurls $domain | tee $deep_dir/$domain/waybackurls.txt
 
+            [[ -r $deep_dir/$domain/waybackurls.txt && $(cat $deep_dir/$domain/waybackurls.txt) ]] || print_warning "No findings from 'waybackurls'"
+
             my_diff $deep_dir/$domain/waybackurls.old $deep_dir/$domain/waybackurls.txt "waybackurls" $deep_domain_webhook
 
             ## Feroxbuster dir brute-forcing
@@ -1100,14 +730,25 @@ deep_domain_recon() {
 
             ## Combine files
 
-            sort -u $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/waybackurls.txt | extract_url > $deep_dir/$domain/combined_deep_1.txt
+            print_message "Combining Findings"
+
+            sort -u $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/waybackurls.txt | extract_url > $deep_dir/$domain/combined_deep.txt
+            cat $deep_dir/$domain/combined_deep.txt | probe | tee $deep_dir/$domain/combined_deep_live.txt
+            findings=($(cat $deep_dir/$domain/combined_deep_live.txt))
 
             ## Scan js files for leaks
 
             print_task "Runing 'secretfinder' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/secretfinder.html")"
             [[ -f $deep_dir/$domain/secretfinder.html ]] && mv $deep_dir/$domain/secretfinder.html $deep_dir/$domain/secretfinder.old 
 
-            secretfinder -i $deep_dir/$domain/combined_deep_1.txt -e -o $deep_dir/$domain/secretfinder.html
+            [[ -d $deep_dir/$domain/secretfinder ]] || mkdir $deep_dir/$domain/secretfinder 
+
+            for url in "${findings[@]}"; do
+
+                filename=$(echo $url | sed -e "s/https:\/\///g" -e "s/http:\/\///g")
+                sudo -u kali secretfinder -i $url -e -o $deep_dir/$domain/secretfinder/${filename}.html
+            
+            done
 
             my_diff $deep_dir/$domain/secretfinder.old $deep_dir/$domain/secretfinder.html "SecretFinder.py" $deep_domain_webhook
 
@@ -1118,7 +759,7 @@ deep_domain_recon() {
         end_seconds=$SECONDS
         execution_seconds=$((end_seconds - start_seconds))
         execution_time=$(date -u -d @${execution_seconds} +"%T")
-        print_green "Completed Deep Recon of Domains (Took ${yellow}$execution_time${reset}${bold})" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir")"
+        print_green "Completed Deep Recon of Domains" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir")"
         send_to_discord "**Completed** __Deep Recon of URLs__ in \`$execution_time\`" $logs_webhook
     else
         print_warning "No Deep Domains Defined"
@@ -1128,7 +769,7 @@ deep_domain_recon() {
 
 leaks() {
 
-    print_announce "SCANNING FOR LEAKS IN GITHUB/GITLAB REPOSITORIES"
+    print_announce "Scanning for Leaks in Github/Gitlab Repositories"
     start_seconds=$SECONDS
 
     platforms=("GitHub" "GitLab")
@@ -1220,91 +861,122 @@ leaks() {
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
     execution_time=$(date -u -d @${execution_seconds} +"%T")
-    print_green "Completed Scan for Leaks (Took ${yellow}$execution_time${reset}${bold})" "${red}-->${reset} ./$(realpath --relative-to="." "$leaks_dir")"
+    print_green "Completed Scan for Leaks" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$leaks_dir")"
     send_to_discord "**Completed** __Search for Leaks__ in \`$execution_time\`" $logs_webhook
 }
 
 init() {
+    print_banner
+    print_info
 
     ## Check For Requirements
     
-    if [[ ! "$target" ]]; then
+    if [[ ! "$input_target" ]]; then
         print_error "Missing target (-t|-target)"
-    elif [[ ! "$ghtoken" ]]; then
+    elif [[ ! "$input_ghtoken" ]]; then
         print_error "Missing GitHub Token (-ght|-github-token)"
-    elif [[ ! "$input_brute_wordlist" ]]; then
-        print_error "Missing wordlist for subdomain brute forcing (-b|-brute-wordlist)"
     fi
+    
 
-    if [[ ! "$path" ]]; then
+    if [[ ! "$input_path" ]]; then
         path=$(realpath .)
+    else
+        path=$input_path
     fi
 
-    org=$(echo $target | cut -d '.' -f 1)
+    org=$(echo $input_target | cut -d '.' -f 1)
+
+    if ! [[ $input_target =~ ^[a-zA-Z0-9.-]+\.[a-z]{2,}$ ]]; then
+         print_error "Please provide only a base domain, not a subdomain or a URL"       
+    fi
 
     ## Brute Wordlist
 
-    while read -r wordlist; do
-        [[ -r $wordlist ]] || print_error "Can't read file '$wordlist'"
-    done < <(echo $input_brute_wordlist | sed -e "s/\"//g" -e "s/,/\n/g")
 
-    brute_wordlist=$(echo $input_brute_wordlist | sed 's/,/",\ "/g')
+    if [[ ! "$input_brute_wordlist" ]]; then
+        if [[ -r "/usr/share/seclists/Discovery/DNS/namelist.txt" ]]; then
+            brute_wordlist="/usr/share/seclists/Discovery/DNS/namelist.txt"
+        else
+            print_error "Default subdomain brute force wordlist not found, please provide one (-b -brute-wordlists)"
+        fi
+    else
+        while read -r wordlist; do
+            [[ -r $wordlist ]] || print_error "Can't read file '$wordlist'"
+        done < <(echo $input_brute_wordlist | sed -e "s/\"//g" -e "s/,/\n/g")
+
+        brute_wordlist=$(echo $input_brute_wordlist | sed 's/,/",\ "/g')
+    fi
 
     ## Custom Attacks
 
-    if [[ $custom_task ]]; then
+    if [[ $input_custom_task ]]; then
         while read -r attack; do
             match=0
             for dtasks in ${default_tasks[*]}; do
                 [[ $dtasks = "$attack" ]] && match=1
             done
             [[ $match = 1 ]] || print_error "Unknowon attack '$attack'"
-        done < <(echo $custom_task | sed "s/,/\n/g")
-        attack_method_json=$(echo \"$custom_task\" | sed "s/,/\",\ \"/g")
+        done < <(echo $input_custom_task | sed "s/,/\n/g")
+        attack_method_json=$(echo \"$input_custom_task\" | sed "s/,/\",\ \"/g")
     else
         attack_method_json=$(echo \"${default_tasks[*]}\" | sed "s/\ /\",\ \"/g")
     fi
 
     ## Webhooks
 
-    if ! [[ $subdomain_webhook && $screenshot_webhook && $service_webhook && $deep_domain_webhook && $leaks_webhook && $logs_webhook ]] && [[ $subdomain_webhook || $screenshot_webhook || $service_webhook || $deep_domain_webhook || $leaks_webhook || $logs_webhook ]]; then
-        print_error "Must provide ALL webhook URLs (subdomain, service, deep_domain_recon, leaks, logs)"
+    if ! [[ $input_subdomain_webhook && $input_screenshot_webhook && $input_fingerprint_webhook && $input_deep_domain_webhook && $input_leaks_webhook && $input_logs_webhook ]] && [[ $input_subdomain_webhook || $input_screenshot_webhook || $input_fingerprint_webhook || $input_deep_domain_webhook || $input_leaks_webhook || $input_logs_webhook ]]; then
+        print_error "Must provide ALL webhook URLs (subdomain, screenshot, fingerprint, deep_domain_recon, leaks, logs)"
     fi
 
     ## GitHub Recon
 
-    if [[ $github_recon ]]; then
-        github_recon_json=$(echo \"$github_recon\" | sed "s/,/\",\ \"/g")
+    if [[ $input_github_recon ]]; then
+        github_recon_json=$(echo \"$input_github_recon\" | sed "s/,/\",\ \"/g")
     fi
     
     ## GitLab Recon
 
-    if [[ $gitlab_recon ]]; then
-        gitlab_recon_json=$(echo \"$gitlab_recon\" | sed "s/,/\",\ \"/g")
+    if [[ $input_gitlab_recon && $input_gltoken ]]; then
+        gitlab_recon_json=$(echo \"$input_gitlab_recon\" | sed "s/,/\",\ \"/g")
+    elif [[ $input_gitlab_recon ]] && ! [[ $input_gltoken ]]; then
+        print_error "Enumeration on GitLab Repositories requires a GitLab Access Token (-glt -gitlab-token)"
     fi
 
     ## Deep Domains
 
-    if [[ ${deep_domains[*]} && ${fuzz_wordlist[*]} ]]; then
-        deep_domains_json="$(echo "$(for i in "${!deep_domains[@]}"; do
-                                 echo -n "{\"domain\": \"${deep_domains[$i]}\",\"wordlist\": \"${fuzz_wordlist[$i]}\"}"
+    if [[ ${input_deep_domains[*]} && ${input_fuzz_wordlist[*]} ]]; then
+        deep_domains_json="$(echo "$(for i in "${!input_deep_domains[@]}"; do
+                                 echo -n "{\"domain\": \"${input_deep_domains[$i]}\",\"wordlist\": \"${input_fuzz_wordlist[$i]}\"}"
                              done)" | sed "s/}{/},{/g")"
     fi
 
     ## Create Directories
 
-    [[ -d "$path/${org}_recon" ]] || mkdir "$path/${org}_recon"
-    [[ -d "$path/${org}_recon/subdomains" ]] || mkdir "$path/${org}_recon/subdomains"
-    [[ -d "$path/${org}_recon/screenshots" ]] || mkdir "$path/${org}_recon/screenshots"
-    [[ -d "$path/${org}_recon/screenshots/old" ]] || mkdir "$path/${org}_recon/screenshots/old"
-    [[ -d "$path/${org}_recon/logs" ]] || mkdir "$path/${org}_recon/logs"
-    [[ -d "$path/${org}_recon/leaks" ]] || mkdir "$path/${org}_recon/leaks"
-    [[ -d "$path/${org}_recon/leaks/github/" ]] || mkdir "$path/${org}_recon/leaks/github"
-    [[ -d "$path/${org}_recon/leaks/gitlab/" ]] || mkdir "$path/${org}_recon/leaks/gitlab"
-    [[ -d "$path/${org}_recon/deep_domains" ]] || mkdir "$path/${org}_recon/deep_domains"
-    [[ -d "$path/${org}_recon/fingerprint" ]] || mkdir "$path/${org}_recon/fingerprint"
-
     recon_dir="$path/${org}_recon"
+    
+    [[ -d "$recon_dir" ]] || mkdir "$recon_dir"
+    [[ -d "$recon_dir/subdomains" ]] || mkdir "$recon_dir/subdomains"
+    [[ -d "$recon_dir/subdomains/old" ]] || mkdir "$recon_dir/subdomains/old"
+
+    [[ -d "$recon_dir/screenshots" ]] || mkdir "$recon_dir/screenshots"
+    [[ -d "$recon_dir/screenshots/old" ]] || mkdir "$recon_dir/screenshots/old"
+
+    [[ -d "$recon_dir/logs" ]] || mkdir "$recon_dir/logs"
+
+    [[ -d "$recon_dir/leaks" ]] || mkdir "$recon_dir/leaks"
+    [[ -d "$recon_dir/leaks/old" ]] || mkdir "$recon_dir/leaks/old"
+
+    [[ -d "$recon_dir/leaks/github" ]] || mkdir "$recon_dir/leaks/github"
+    [[ -d "$recon_dir/leaks/github/old" ]] || mkdir "$recon_dir/leaks/github/old"
+
+    [[ -d "$recon_dir/leaks/gitlab" ]] || mkdir "$recon_dir/leaks/gitlab"
+    [[ -d "$recon_dir/leaks/gitlab/old" ]] || mkdir "$recon_dir/leaks/gitlab/old"
+
+    [[ -d "$recon_dir/deep_domains" ]] || mkdir "$recon_dir/deep_domains"
+
+    [[ -d "$recon_dir/fingerprint" ]] || mkdir "$recon_dir/fingerprint"
+    [[ -d "$recon_dir/fingerprint/old" ]] || mkdir "$recon_dir/fingerprint/old"
+
     subdomain_dir="${recon_dir}/subdomains"
     screenshot_dir="${recon_dir}/screenshot"
     logs_dir="${recon_dir}/logs"
@@ -1319,8 +991,9 @@ init() {
     
     jq -n "{
             config: {
-                    target: \"$target\", 
-                    recon_path: \"$recon_dir\", 
+                    target: \"$input_target\", 
+                    recon_path: \"$recon_dir\",
+                    scope_regex: \"$input_scope_regex\"
                     subdomain_brute_wordlist: [ 
                         \"$brute_wordlist\" 
                     ], 
@@ -1329,26 +1002,26 @@ init() {
                     ], 
                     git: { 
                         token: { 
-                            github: \"$ghtoken\",
-                            gitlab: \"$gltoken\" 
+                            github: \"$input_ghtoken\",
+                            gitlab: \"$input_gltoken\" 
                         }, 
                         github_recon: [ 
                             $github_recon_json
                         ], 
                         gitlab_recon: [ 
-                            $gitlab_recon_json 
+                            $gitlab_recon_json
                         ]
                     },
                     attack_method: [ 
                         $attack_method_json
                     ],
                     webhooks: {
-                        subdomain: \"$subdomain_webhook\",
-                        screenshot: \"$screenshot_webhook\",
-                        service: \"$service_webhook\",
-                        deep_domain: \"$deep_domain_webhook\",
-                        leaks: \"$leaks_webhook\",
-                        logs: \"$logs_webhook\"
+                        subdomain: \"$input_subdomain_webhook\",
+                        screenshot: \"$input_screenshot_webhook\",
+                        fingerprint: \"$input_fingerprint_webhook\",
+                        deep_domain: \"$input_deep_domain_webhook\",
+                        leaks: \"$input_leaks_webhook\",
+                        logs: \"$input_logs_webhook\"
                     }
                 }
             }" > ${config_file}.new
@@ -1382,6 +1055,9 @@ init() {
 }
 
 config() {
+    print_banner
+    print_info
+    init_vars
 
     ## Check For Config File
 
@@ -1391,84 +1067,121 @@ config() {
 
     ## Make sure nano is standalone
 
-    if [[ $target || $ghtoken || $deep_domains || $fuzz_wordlist || $input_brute_wordlist || $github_recon || $attack_method ]] && [[ $nano_it ]]; then
-        print_error "-n|-nano is a standalone flag"
+    if [[ $input_target || $input_ghtoken || $input_deep_domains || $input_fuzz_wordlist || $input_brute_wordlist || $input_github_recon || $input_attack_method ]] && [[ $manual ]]; then
+        print_error "-m|-manual is a standalone flag"
     fi
+
+    ## Create directories if aren't there
+
+    [[ -d "$recon_dir/subdomains" ]] || mkdir "$recon_dir/subdomains"
+    [[ -d "$recon_dir/subdomains/old" ]] || mkdir "$recon_dir/subdomains/old"
+
+    [[ -d "$recon_dir/screenshots" ]] || mkdir "$recon_dir/screenshots"
+    [[ -d "$recon_dir/screenshots/old" ]] || mkdir "$recon_dir/screenshots/old"
+
+    [[ -d "$recon_dir/logs" ]] || mkdir "$recon_dir/logs"
+
+    [[ -d "$recon_dir/leaks" ]] || mkdir "$recon_dir/leaks"
+    [[ -d "$recon_dir/leaks/old" ]] || mkdir "$recon_dir/leaks/old"
+
+    [[ -d "$recon_dir/leaks/github" ]] || mkdir "$recon_dir/leaks/github"
+    [[ -d "$recon_dir/leaks/github/old" ]] || mkdir "$recon_dir/leaks/github/old"
+
+    [[ -d "$recon_dir/leaks/gitlab" ]] || mkdir "$recon_dir/leaks/gitlab"
+    [[ -d "$recon_dir/leaks/gitlab/old" ]] || mkdir "$recon_dir/leaks/gitlab/old"
+
+    [[ -d "$recon_dir/deep_domains" ]] || mkdir "$recon_dir/deep_domains"
+
+    [[ -d "$recon_dir/fingerprint" ]] || mkdir "$recon_dir/fingerprint"
+    [[ -d "$recon_dir/fingerprint/old" ]] || mkdir "$recon_dir/fingerprint/old"
 
     ## Create a Temp Config File
 
     cp $config_file /tmp/temp_$(basename ${config_file})
     tmp_config_file=/tmp/temp_$(basename ${config_file})
 
-    ## Nano It
+    ## Edit manually
 
-    if [[ $nano_it ]]; then
-        nano $tmp_config_file
+    if [[ $manual ]]; then
+        if [[ $input_editor ]]; then
+            if [[ $(which $input_editor) ]]; then
+                $input_editor $tmp_config_file
+            else
+                print_error "Unknown command '$input_editor'"
+            fi
+        else
+            nano $tmp_config_file
+        fi
     fi
 
     ## Change/Define Webhooks
 
-    if [[ $subdomain_webhook ]]; then
-        jq ".config.webhooks.subdomain = \"$subdomain_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_subdomain_webhook ]]; then
+        jq ".config.webhooks.subdomain = \"$input_subdomain_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
     
-    if [[ $screenshot_webhook ]]; then
-        jq ".config.webhooks.screenshot = \"$screenshot_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_screenshot_webhook ]]; then
+        jq ".config.webhooks.screenshot = \"$input_screenshot_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
     
-    if [[ $service_webhook ]]; then
-        jq ".config.webhooks.service = \"$service_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_fingerprint_webhook ]]; then
+        jq ".config.webhooks.fingerprint = \"$input_fingerprint_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
     
-    if [[ $deep_domain_webhook ]]; then
-        jq ".config.webhooks.deep_domain = \"$deep_domain_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_deep_domain_webhook ]]; then
+        jq ".config.webhooks.deep_domain = \"$input_deep_domain_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
     
-    if [[ $leaks_webhook ]]; then
-        jq ".config.webhooks.leaks = \"$leaks_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_leaks_webhook ]]; then
+        jq ".config.webhooks.leaks = \"$input_leaks_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
     
-    if [[ $logs_webhook ]]; then
-        jq ".config.webhooks.logs = \"$logs_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_logs_webhook ]]; then
+        jq ".config.webhooks.logs = \"$input_logs_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
     ## Change Target
 
-    if [[ $target ]]; then
-        jq ".config.target = \"$target\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_target ]]; then
+        jq ".config.target = \"$input_target\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+        mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+    fi
+   
+    ## Change Target
+
+    if [[ $input_scope_regex ]]; then
+        jq --arg regex "$input_scope_regex" ".config.scope_regex = \$regex" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
     ## Change GitHub Token
 
-    if [[ $ghtoken ]]; then
-        jq ".config.git.token.github = \"$ghtoken\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_ghtoken ]]; then
+        jq ".config.git.token.github = \"$input_ghtoken\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
     ## Change GitHub Token
 
-    if [[ $gltoken ]]; then
-        jq ".config.git.token.gitlab = \"$gltoken\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+    if [[ $input_gltoken ]]; then
+        jq ".config.git.token.gitlab = \"$input_gltoken\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
     ## Add Fuzz Domains
 
-    if [[ "${deep_domains[*]}" && "${fuzz_wordlist[*]}" ]]; then
+    if [[ "${input_deep_domains[*]}" && "${input_fuzz_wordlist[*]}" ]]; then
 
-        print_message "${deep_domains[*]}\n${fuzz_wordlist[*]}"
-
-        for i in "${!deep_domains[@]}"; do
+        for i in "${!input_deep_domains[@]}"; do
             jq ".config.deep_domains += [{
-                                            domain: \"${deep_domains[$i]}\",
-                                            wordlist: \"${fuzz_wordlist[$i]}\" 
+                                            domain: \"${input_deep_domains[$i]}\",
+                                            wordlist: \"${input_fuzz_wordlist[$i]}\" 
                                         }]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
             mv "${tmp_config_file}.tmp" "${tmp_config_file}"
         done
@@ -1490,9 +1203,9 @@ config() {
 
     ## Add GitHub Repo For Recon
 
-    if [[ $github_recon ]]; then
+    if [[ $input_github_recon ]]; then
         
-        github_recon_json=$(echo \"$github_recon\" | sed "s/,/\",\ \"/g")
+        github_recon_json=$(echo \"$input_github_recon\" | sed "s/,/\",\ \"/g")
 
         jq ".config.git.github_recon += [ $github_recon_json ]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
@@ -1500,9 +1213,9 @@ config() {
     
     ## Add GitLab Repo For Recon
 
-    if [[ $gitlab_recon ]]; then
+    if [[ $input_gitlab_recon ]]; then
 
-        gitlab_recon_json=$(echo \"$gitlab_recon\" | sed "s/,/\",\ \"/g")
+        gitlab_recon_json=$(echo \"$input_gitlab_recon\" | sed "s/,/\",\ \"/g")
 
         jq ".config.git.gitlab_recon += [ $gitlab_recon_json ]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
@@ -1510,10 +1223,10 @@ config() {
 
     ## Change Attack Method
 
-    if [[ $attack_method ]]; then
+    if [[ $input_attack_method ]]; then
 
-        if [[ $attack_method = 'default' ]]; then
-            attack_method_json=$(echo \"${default_tasks[*]}\" | sed "s/\ /\",\ \"/g")
+        if [[ $input_attack_method = 'default' ]]; then
+            attack_method_json=$(echo \"${input_default_tasks[*]}\" | sed "s/\ /\",\ \"/g")
         else
             while read -r attack; do
                     match=0
@@ -1521,8 +1234,8 @@ config() {
                     [[ $dtasks = "$attack" ]] && match=1
                 done
                 [[ $match = 1 ]] || print_error "Unknowon attack '$attack'"
-            done < <(echo $attack_method | sed "s/,/\n/g")
-            attack_method_json=$(echo \"$attack_method\" | sed "s/,/\",\ \"/g")
+            done < <(echo $input_attack_method | sed "s/,/\n/g")
+            attack_method_json=$(echo \"$input_attack_method\" | sed "s/,/\",\ \"/g")
         fi
 
         jq ".config.attack_method = [$attack_method_json]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
@@ -1539,13 +1252,13 @@ config() {
 }
 
 recon() {
-    for attack in ${attack_method[*]}; do
+    for attack in "${attack_method[@]}"; do
         if [[ $attack = "subdomain" ]]; then
             subdomain_recon
         elif [[ $attack = "screenshot" ]]; then
             subdomain_screenshot
-        elif [[ $attack = "services" ]]; then
-            services_recon
+        elif [[ $attack = "fingerprint" ]]; then
+            fingerprint
         elif [[ $attack = "deep_domains" ]]; then
             deep_domain_recon
         elif [[ $attack = "leaks" ]]; then
@@ -1554,10 +1267,89 @@ recon() {
     done
 }
 
+reports() {
+
+    print_banner
+    print_info
+    init_vars
+
+    print_message "Available reports:"
+    for available_report in "${attack_method[@]}"; do
+        print_minor "$available_report"
+    done
+
+    echo ""
+
+    if [[ $report ]]; then
+            if [[ $report = "subdomain" ]]; then
+                dir=$subdomain_dir
+                files=($(find $subdomain_dir -not -path "*.old" -type f))
+                for file in "${files[@]}"; do
+                    [[ $(cat $file) = "" ]] || available_files+=($file)
+                done
+            elif [[ $report = "fingerprint" ]]; then
+                dir=$fingerprint_dir
+                files=($(find $fingerprint_dir -not -path "*.old" -type f))
+                for file in "${files[@]}"; do
+                    [[ $(cat $file) = "" ]] || available_files+=($file)
+                done
+            elif [[ $report = "deep_domains" ]]; then
+                dir=$deep_dir
+                files=($(find $deep_dir -not -path "*.old" -type f))
+                for file in "${files[@]}"; do
+                    [[ $(cat $file) = "" ]] || available_files+=($file)
+                done
+            elif [[ $report = "leaks" ]]; then
+                dir=$leaks_dir
+                files=($(find $leaks_dir -not -path "*.old" -type f))
+                for file in "${files[@]}"; do
+                    [[ $(cat $file) = "" ]] || available_files+=($file)
+                done
+            else
+                print_error "Unknown report: $report"
+            fi
+
+        for file in "${available_files[@]}"; do
+            available_subreports+=($(echo $file | sed "s@$dir\/@@"))
+        done
+
+        if [[ $available_subreports ]]; then
+            print_message "Available sub-reports:"
+            for sr in "${available_subreports[@]}"; do
+                print_minor "$sr"
+            done
+
+            if [[ $subreport ]]; then 
+                
+                for r in "${available_subreports[@]}"; do
+                    [[ $r = $subreport ]] && found=1
+                done
+                
+                echo ""
+
+                [[ $found = 1 ]] || print_error "Unavailable sub-report provided: $subreport"
+
+                print_message "Report:" "$subreport"
+                echo ""
+
+                if [[ $subreport = *".json"* ]]; then
+                    jq . $dir/$subreport
+                else 
+                    bat -Pn $dir/$subreport
+                fi
+            fi
+        else
+            print_warning "No sub-reports for $report enumeration"
+        fi
+    fi
+}
+
 init_vars() {
     [[ $config_file ]] || print_error "Missing config file (-c|-config-file)"
 
     target=$(jq -r '.config.target' $config_file)
+
+    scope_regex=$(jq -r '.config.scope_regex' $config_file)
     brute_wordlists=($(jq -r '.config.subdomain_brute_wordlist[]' $config_file))
 
     ghtoken=$(jq -r '.config.git.token.github' $config_file)
@@ -1573,7 +1365,7 @@ init_vars() {
 
     subdomain_webhook=$(jq -r '.config.webhooks.subdomain' $config_file)
     screenshot_webhook=$(jq -r '.config.webhooks.screenshot' $config_file)
-    service_webhook=$(jq -r '.config.webhooks.service' $config_file)
+    fingerprint_webhook=$(jq -r '.config.webhooks.fingerprint' $config_file)
     deep_domain_webhook=$(jq -r '.config.webhooks.deep_domain' $config_file)
     leaks_webhook=$(jq -r '.config.webhooks.leaks' $config_file)
     logs_webhook=$(jq -r '.config.webhooks.logs' $config_file)
@@ -1596,7 +1388,7 @@ init_vars() {
 }
 
 _test() {
-    print_announce "TEST RUN"   
+    print_announce "Test Run"   
     start_seconds=$SECONDS
     # echo $subdomain_dir
     sleep 10
@@ -1606,7 +1398,7 @@ _test() {
     print_green "Test completed in ${yellow}$execution_time${reset}" "${red}-->${reset} ./tmp/example.txt"
 }
 
-main_run() {
+func_wrapper() {
     command=$1
     scan_name=$2
 
@@ -1614,10 +1406,16 @@ main_run() {
 
     start_date=$(my_date)
     logfile="$logs_dir/$scan_name ($start_date).log"
+
+    wait_for_internet
+    
+    send_to_discord "**STARTING RECON IN MODE:** \`$mode\`" $logs_webhook
     
     {
     print_banner
     print_info
+    $command
+
     if [[ $logs_webhook ]]; then
         print_message "Uploading Logs..."
     fi
@@ -1626,7 +1424,550 @@ main_run() {
     send_to_discord "Log file for **$scan_name** scan at: \`$start_date\`" "$logs_webhook" "$logfile"
 }
 
-## Check dependencies
+flags() {
+
+    [[ "$#" -eq 0 ]] && help
+
+    case $1 in
+        init)
+            mode="init"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -t|-target)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_target="$1"
+                        else
+                            print_error "-t|-target requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ght|-github-token)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_ghtoken="$1"
+                        else
+                            print_error "-ght|-github-token requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ghr|-github-recon)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_github_recon="$1"
+                        else
+                            print_error "-ghr|-github-recon requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -glt|-gitlab-token)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_gltoken="$1"
+                        else
+                            print_error "-glt|-gitlab-token requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -glr|-gitlab-recon)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_gitlab_recon="$1"
+                        else
+                            print_error "-glr|-gitlab-recon requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ws|-subdomain-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_subdomain_webhook="$1"
+                        else
+                            print_error "-ws|-subdomain-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wf|-fingerprint-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_fingerprint_webhook="$1"
+                        else
+                            print_error "-wf|-fingerprint-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wd|-deep-domain-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_deep_domain_webhook="$1"
+                        else
+                            print_error "-wd|-deep-domain-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wl|-leaks-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_leaks_webhook="$1"
+                        else
+                            print_error "-wl|-leaks-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wg|-logs-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_logs_webhook="$1"
+                        else
+                            print_error "-wg|-logs_webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wc|-screenshots-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_screenshot_webhook="$1"
+                        else
+                            print_error "-wc|-screenshots-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -b|-brute-wordlists)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_brute_wordlist="$1"
+                        else
+                            print_error "-b|-brute-wordlist requires a wordlist file!"
+                        fi
+                        shift
+                        ;;
+                    -p|-path)
+                        shift
+                        if [[ "$1" != -?* && -d "$1" ]]; then
+                            input_path="$(realpath $1)"
+                        else
+                            print_error "-p|-path requires a valid path!"
+                        fi
+                        shift
+                        ;;
+                    -ct|-custom-tasks)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_custom_task="$1"
+                        else
+                            print_error "-ct|-custom-tasks requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -sr|-scope-regex)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_scope_regex="$1"
+                        else
+                            print_error "-sr|-scope-regex requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -d|-deep-domains)
+                        shift
+                        if [[ "$1" && -r "$2" ]]; then
+                            input_deep_domains+=("$1")
+                            input_fuzz_wordlist+=("$2")
+                        else
+                            print_error "-d|-deep-domains requires a domain and a valid path!"
+                        fi
+                        shift 2
+                        ;;
+                    -h|-help)
+                        help init
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac        
+            done
+            ;;
+        config)
+            mode="config"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -t|-target)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_target="$1"
+                        else
+                            print_error "-t|-target requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -d|-deep-domains)
+                        shift
+                        if [[ "$1" && -r "$2" ]]; then
+                            input_deep_domains+=("$1")
+                            input_fuzz_wordlist+=("$2")
+                        else
+                            print_error "-d|-deep-domains requires a domain and a valid path!"
+                        fi
+                        shift 2
+                        ;;
+                    -sr|-scope-regex)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_scope_regex="$1"
+                        else
+                            print_error "-sr|-scope-regex requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ght|-github-token)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_ghtoken="$1"
+                        else
+                            print_error "-ght|-github-token requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ghr|-github-recon)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_github_recon="$1"
+                        else
+                            print_error "-ghr|-github-recon requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -glt|-gitlab-token)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_gltoken="$1"
+                        else
+                            print_error "-glt|-gitlab-token requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -glr|-gitlab-recon)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_gitlab_recon="$1"
+                        else
+                            print_error "-glr|-gitlab-recon requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -b|-brute-wordlist)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_input_brute_wordlist="$1"
+                        else
+                            print_error "-b|-brute-wordlist requires a wordlist file!"
+                        fi
+                        shift
+                        ;;
+                    -a|-attack-method)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_attack_method="$1"
+                        else
+                            print_error "-a|-attack-method requires a valid path!"
+                        fi
+                        shift
+                        ;;
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$(realpath $1)"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        shift
+                        ;;
+                    -ws|-subdomain-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_subdomain_webhook="$1"
+                        else
+                            print_error "-ws|-subdomain-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wf|-fingerprint-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_fingerprint_webhook="$1"
+                        else
+                            print_error "-wf|-fingerprint-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wd|-deep-domain-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_deep_domain_webhook="$1"
+                        else
+                            print_error "-wd|-deep-domain-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wl|-leaks-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_leaks_webhook="$1"
+                        else
+                            print_error "-wl|-leaks_webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wg|-logs-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_logs_webhook="$1"
+                        else
+                            print_error "-wg|-logs_webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -wc|-screenshots-webhook)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_screenshot_webhook="$1"
+                        else
+                            print_error "-wc|-screenshots-webhook requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -m|-manual)
+                        manual='true'
+                        shift
+                        if [[ $1 != -?* ]]; then
+                            input_editor="$1"
+                        fi
+                        shift
+                        ;;
+                    -h|-help)
+                        help config
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac        
+            done
+            ;;    
+        recon)
+            mode="recon"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help recon
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        subdomain)
+            mode="subdomain"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help subdomain
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        screenshot)
+            mode="screenshot"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help screenshot
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        deep)
+            mode="deep"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help deep
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        leaks)
+            mode="leaks"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help leaks
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        gdork)
+            mode="gdork"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help gdork
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        test)
+            mode="test"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        report)
+            mode="report"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -r|-report)
+                        shift
+                        if ! [[ "$1" = -?* ]]; then
+                            report=$1
+                        else
+                            print_error "-r|-report requires an argument!"
+                        fi        
+                        ;;
+                    -s|-sub-report)
+                        shift
+                        if ! [[ "$1" = -?* ]]; then
+                            subreport=$1
+                        else
+                            print_error "-s|-sub-report requires an argument!"
+                        fi        
+                        ;;
+                    -h|-help)
+                        help report
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        help)
+            [[ $2 ]] && print_error "'help' takes no arguments!"
+            help
+            ;;
+        -?*)
+            print_error "Please parse a mode first"
+            ;;
+        *)
+            print_error "Unknown mode '$1'"
+            ;;
+    esac
+}
+
 
 check_dependencies() {
 
@@ -1730,6 +2071,14 @@ check_dependencies() {
         print_error "${bold}dnsreaper${reset} not found"
     fi
     
+    if [[ ! $(which bat) ]]; then
+        print_error "${bold}bat${reset} not found"
+    fi
+    
+    if [[ ! $(which nuclei) ]]; then
+        print_error "${bold}nuclei${reset} not found"
+    fi
+    
 }
 
 ## Run functions based on flags
@@ -1740,38 +2089,34 @@ flags "$@"
 
 case $mode in
     init)
-        print_banner
-        print_info
         init
         ;;
     config)
-        print_banner
-        print_info
         config
         ;;
+    report)
+        reports
+        ;;
     recon)
-        main_run recon "Complete Recon"
+        func_wrapper recon "Complete Recon"
         ;;
     subdomain)
-        main_run subdomain_recon "Subdomain Recon"
+        func_wrapper subdomain_recon "Subdomain Recon"
         ;;
     screenshot)
-        main_run subdomain_screenshot "Screenshots of Subdomains"
+        func_wrapper subdomain_screenshot "Screenshots of Subdomains"
         ;;
     deep)
-        main_run deep_domain_recon "Deep Domain Recon"
+        func_wrapper deep_domain_recon "Deep Domain Recon"
         ;;
     leaks)
-        main_run leaks "Leaks"
+        func_wrapper leaks "Leaks"
         ;;
     gdork)
-        init_vars
-        print_banner
-        print_info
         github_dorking_links
         ;;
     test)
-        main_run _test "Test"
+        func_wrapper _test "Test"
         ;;
     *)
         print_error "Invalid mode \"${mode}\"!"
