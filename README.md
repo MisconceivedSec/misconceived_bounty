@@ -461,4 +461,4 @@ The `gdork` function generates github dorking links, copies them to the clipboar
 - [ ] Add web technology fingerprinting to the `fingerprint` function
 - [ ] Add more `nuclei` vulnerability scans
 - [ ] Add a local registry that contains names of targets as well as their configuration files (maybe a `register` function)
-- [ ] Add pager option (output like `less`) to `report` function
+- [x] Add pager option (output like `less`) to `report` function

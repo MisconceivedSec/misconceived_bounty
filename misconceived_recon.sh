@@ -394,7 +394,7 @@ subdomain_recon() {
     ## Subfinder
 
     print_task "Running 'subfinder'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subfinder.txt")"
-    [[ -f $subdomain_dir/subfinder.old ]] && mv $subdomain_dir/subfinder.old $subdomain_dir/subfinder.txt
+    [[ -f $subdomain_dir/subfinder.txt ]] && mv $subdomain_dir/subfinder.txt $subdomain_dir/subfinder.old
 
     subfinder -d "$target" -o $subdomain_dir/subfinder.txt
 
@@ -1337,13 +1337,13 @@ reports() {
 
                 [[ $found = 1 ]] || print_error "Unavailable sub-report provided: $subreport"
 
-                print_message "Report:" "$subreport"
+                print_message "Reading Sub-report:" "$subreport"
                 echo ""
 
                 if [[ $subreport = *".json"* ]]; then
                     jq . $dir/$subreport
                 else 
-                    bat -Pn $dir/$subreport
+                    bat -n $dir/$subreport
                 fi
             fi
         else
