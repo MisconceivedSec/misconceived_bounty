@@ -455,7 +455,7 @@ subdomain_recon() {
     [[ -f $subdomain_dir/subdomainizer.txt ]] && mv $subdomain_dir/subdomainizer.txt $subdomain_dir/subdomainizer.old
     [[ -f $subdomain_dir/subdomainizer_info.txt ]] && mv $subdomain_dir/subdomainizer_info.txt $subdomain_dir/subdomainizer_info.old
 
-    subdomainizer -l combined_temp.txt -gt $ghtoken -g -o subdomainizer.txt
+    subdomainizer -l $subdomain_dir/combined_temp.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
     grep "Found some secrets(might be false positive)..." -A 1000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
 
     my_diff $subdomain_dir/subdomainizer.old $subdomain_dir/subdomainizer.txt "subdomainizer"
@@ -492,9 +492,13 @@ subdomain_recon() {
 
     ## Final Combination
 
+    [[ -r $subdomain_dir/final_subdomains.txt ]] && mv $subdomain_dir/final_subdomains.txt $subdomain_dir/final_subdomains.old
+    [[ -r $subdomain_dir/final_subdomains_stripped.txt ]] && mv $subdomain_dir/final_subdomains_stripped.txt $subdomain_dir/final_subdomains_stripped.old
+
     print_message "Final Combination..."
     
     ## Filter with scope regex if available
+
     if [[ $scope_regex ]]; then
         print_warning "Filtering out out-of-scope domains" 
         cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_subdomains.txt
@@ -504,10 +508,10 @@ subdomain_recon() {
 
     ## New Subdomains
 
-    if [[ -f $subdomain_dir/final_subdomains_stripped.old ]]; then
-        cat $subdomain_dir/final_subdomains_stripped.txt | anew $subdomain_dir/final_subdomains_stripped.old -d > $subdomain_dir/new_subdomains.txt
+    if [[ -f $subdomain_dir/final_subdomains.old ]]; then
+        cat $subdomain_dir/final_subdomains.txt | anew $subdomain_dir/final_subdomains.old -d > $subdomain_dir/new_subdomains.txt
     else
-        cat $subdomain_dir/final_subdomains_stripped.txt > $subdomain_dir/new_subdomains.txt
+        cat $subdomain_dir/final_subdomains.txt > $subdomain_dir/new_subdomains.txt
     fi
 
     ## Check for live subdomains
@@ -515,11 +519,15 @@ subdomain_recon() {
     print_task "Running 'httprobe' (looking for live subdomains)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/live_subdomains.txt")"
 
     cat $subdomain_dir/new_subdomains.txt | probe | tee "$subdomain_dir/live_subdomains.txt"
+    
+    ## Strip subdomains
+
+    cat $subdomain_dir/final_subdomains.txt | extract_url > $subdomain_dir/final_subdomains_stripped.txt
 
     ## Count and output new subdomains
 
     new_subdomain_count=$(wc -l "$subdomain_dir/new_subdomains.txt" | cut -d ' ' -f 1)
-    live_subdomain_count=$(wc -l "$subdomain_dir/live_subdomains.txt" | cut -d ' ' -f 1)
+    live_subdomain_count=$(wc -l "$subdomain_dir/live_subdomains.txt" | extract_url | cut -d ' ' -f 1)
 
     send_to_discord "Discovered \`$new_subdomain_count\` **NEW** subdomains:" $subdomain_webhook "$subdomain_dir/new_subdomains.txt" 
     send_to_discord "Live subdomains (\`$live_subdomain_count\`):" $subdomain_webhook "$subdomain_dir/live_subdomains.txt" 
