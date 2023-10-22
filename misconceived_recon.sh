@@ -447,8 +447,7 @@ subdomain_recon() {
 
     ## Combining Files
 
-    echo ""
-    print_message "First Combination (filter for living subdomains)"
+    print_task "Combining:" "First Combination"
     cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u | probe | tee $subdomain_dir/combined_temp.txt
 
     ## Subdomainizer
@@ -458,34 +457,34 @@ subdomain_recon() {
     [[ -f $subdomain_dir/subdomainizer_info.txt ]] && mv $subdomain_dir/subdomainizer_info.txt $subdomain_dir/subdomainizer_info.old
 
     subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
-    grep "Found some secrets(might be false positive)..." -A 1000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
+    grep "Found some secrets(might be false positive)..." -A 10000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
 
     my_diff $subdomain_dir/subdomainizer.old $subdomain_dir/subdomainizer.txt "subdomainizer"
     my_diff $subdomain_dir/subdomainizer_info.old $subdomain_dir/subdomainizer_info.txt "subdomainizer leaks"
 
     ## Combining Files
 
-    print_message "Combining Temp Combination with Subdomainizer Report"
+    print_task "Combining:" "First Combination with Subdomainizer Report ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_subdomainizer.txt")"
     
     {
         cat $subdomain_dir/combined_first.txt
         cat $subdomain_dir/subdomainizer.txt | probe
-    } | sort -u | tee $subdomain_dir/combined_subdomains.txt
+    } | sort -u | tee $subdomain_dir/combined_subdomainizer.txt
 
     ## Subfinder recursive
 
     print_task "Running 'subfinder recursive'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subfinder_recursive.txt")"
     [[ -f $subdomain_dir/subfinder_recursive.txt ]] && mv $subdomain_dir/subfinder_recursive.txt $subdomain_dir/subfinder_recursive.old
 
-    subfinder -recursive -list $subdomain_dir/combined_subdomains.txt -o $subdomain_dir/subfinder_recursive.txt
+    subfinder -recursive -list $subdomain_dir/combined_subdomainizer.txt -o $subdomain_dir/subfinder_recursive.txt
 
     my_diff $subdomain_dir/subfinder_recursive.old $subdomain_dir/subfinder_recursive.txt "subfinder recursive"
 
     ## Combining Files
 
-    print_message "Recursive Combination"
+    print_task "Combining:" "Recursive report ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
     {
-        cat $subdomain_dir/combined_subdomains.txt 
+        cat $subdomain_dir/combined_subdomainizer.txt 
         cat $subdomain_dir/subfinder_recursive.txt | probe
     } | sort -u > $subdomain_dir/combined_recursive.txt
     
@@ -1011,41 +1010,41 @@ init() {
     ## Create JSON File
     
     jq -n "{
-            config: {
-                    target: \"$input_target\", 
-                    recon_path: \"$recon_dir\",
-                    scope_regex: \"$input_scope_regex\"
-                    subdomain_brute_wordlist: [ 
-                        \"$brute_wordlist\" 
-                    ], 
-                    deep_domains: [ 
-                        $deep_domains_json
-                    ], 
-                    git: { 
-                        token: { 
-                            github: \"$input_ghtoken\",
-                            gitlab: \"$input_gltoken\" 
-                        }, 
-                        github_recon: [ 
-                            $github_recon_json
-                        ], 
-                        gitlab_recon: [ 
-                            $gitlab_recon_json
-                        ]
-                    },
-                    attack_method: [ 
-                        $attack_method_json
-                    ],
-                    webhooks: {
-                        subdomain: \"$input_subdomain_webhook\",
-                        screenshot: \"$input_screenshot_webhook\",
-                        fingerprint: \"$input_fingerprint_webhook\",
-                        deep_domain: \"$input_deep_domain_webhook\",
-                        leaks: \"$input_leaks_webhook\",
-                        logs: \"$input_logs_webhook\"
-                    }
-                }
-            }" > ${config_file}.new
+    \"config\": {
+        \"target\": \"$input_target\",
+        \"recon_path\": \"$recon_dir\",
+        \"scope_regex\": \"$input_scope_regex\",
+        \"subdomain_brute_wordlist\": [ 
+            \"$brute_wordlist\" 
+        ],
+        \"deep_domains\": [ 
+            $deep_domains_json
+        ],
+        \"git\": { 
+            \"token\": { 
+                \"github\": \"$input_ghtoken\",
+                \"gitlab\": \"$input_gltoken\" 
+            }, 
+            \"github_recon\": [ 
+                $github_recon_json
+            ], 
+            \"gitlab_recon\": [ 
+                $gitlab_recon_json
+            ]
+        },
+        \"attack_method\": [ 
+            $attack_method_json
+        ],
+        \"webhooks\": {
+            \"subdomain\": \"$input_subdomain_webhook\",
+            \"screenshot\": \"$input_screenshot_webhook\",
+            \"fingerprint\": \"$input_fingerprint_webhook\",
+            \"deep_domain\": \"$input_deep_domain_webhook\",
+            \"leaks\": \"$input_leaks_webhook\",
+            \"logs\": \"$input_logs_webhook\"
+            }
+        }
+    }" > ${config_file}.new
 
 
     if [[ -f $config_file ]]; then
@@ -1296,7 +1295,7 @@ reports() {
 
     print_message "Available reports:"
     for available_report in "${attack_method[@]}"; do
-        [[ $available_report != "leaks" ]] && print_minor "$available_report"
+        [[ $available_report != "screenshot" ]] && print_minor "$available_report"
     done
 
     echo ""
