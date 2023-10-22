@@ -1296,7 +1296,7 @@ reports() {
 
     print_message "Available reports:"
     for available_report in "${attack_method[@]}"; do
-        print_minor "$available_report"
+        [[ $available_report != "leaks" ]] && print_minor "$available_report"
     done
 
     echo ""
