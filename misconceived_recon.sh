@@ -447,8 +447,9 @@ subdomain_recon() {
 
     ## Combining Files
 
-    print_task "Combining:" "First Combination"
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u | probe | tee $subdomain_dir/combined_temp.txt
+    print_task "Combining: First Combination" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_first.txt")"
+
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u | probe | tee $subdomain_dir/combined_first.txt
 
     ## Subdomainizer
 
@@ -464,11 +465,11 @@ subdomain_recon() {
 
     ## Combining Files
 
-    print_task "Combining:" "First Combination with Subdomainizer Report ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_subdomainizer.txt")"
+    print_task "Combining: First Combination with Subdomainizer Report" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_subdomainizer.txt")"
     
     {
         cat $subdomain_dir/combined_first.txt
-        cat $subdomain_dir/subdomainizer.txt | probe
+        cat $subdomain_dir/subdomainizer.txt | anew $(cat $subdomain_dir/combined_first.txt | extract_url) | probe
     } | sort -u | tee $subdomain_dir/combined_subdomainizer.txt
 
     ## Subfinder recursive
@@ -485,7 +486,7 @@ subdomain_recon() {
     print_task "Combining:" "Recursive report ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
     {
         cat $subdomain_dir/combined_subdomainizer.txt 
-        cat $subdomain_dir/subfinder_recursive.txt | probe
+        cat $subdomain_dir/subfinder_recursive.txt | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) | probe
     } | sort -u > $subdomain_dir/combined_recursive.txt
     
     ## GoAltDNS
@@ -691,7 +692,7 @@ fingerprint_recon() {
 
         nmap -p 0-10000 -sV -iL $fingerprint_dir/IPs.txt -oG nmap_scans_temp.txt
 
-        sed '/#\ Nmap/d' nmap_scans_temp.txt | grep -v "Status: " > new_nmap_scans.txt
+        sed -e "/#\ Nmap/d" -e "/Status:\ /d" nmap_scans_temp.txt > new_nmap_scans.txt
         rm nmap_scans_temp.txt
 
         if [[ $fingerprint_webhook ]]; then
@@ -1427,6 +1428,7 @@ _test() {
 func_wrapper() {
     command=$1
     scan_name=$2
+    tasks_start_seconds=$SECONDS
 
     init_vars
 
@@ -1446,7 +1448,12 @@ func_wrapper() {
         print_message "Uploading Logs..."
     fi
     } |& tee "$logfile"
-    
+
+    tasks_end_seconds=$SECONDS
+    tasks_execution_seconds=$((tasks_end_seconds - tasks_start_seconds))
+    tasks_execution_time=$(date -u -d @${tasks_execution_seconds} +"%T")
+    print_green "Completed all tasks in ${yellow}$tasks_execution_time${reset}"
+    send_to_discord "Completed all tasks in \`$tasks_execution_time\`" "$logs_webhook"
     send_to_discord "Log file for **$scan_name** scan at: \`$start_date\`" "$logs_webhook" "$logfile"
 }
 
