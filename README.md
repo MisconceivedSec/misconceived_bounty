@@ -6,7 +6,7 @@
 
 # Table of Contents
 
-- [MisconceivedRecon (`misconceived_recon.sh`)](#misconceivedrecon-misconceived_reconsh)
+- [MisconceivedRecon](#misconceivedrecon)
 - [Concept](#concept)
   - [Usage](#usage)
 - [Requirements](#requirements)
