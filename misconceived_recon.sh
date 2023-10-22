@@ -35,6 +35,7 @@ print_banner() {
         echo "  /  |/  // _ \\  MisconceivedRecon"
         echo " / /|_/ // , _/  ${red}Mr. Misconception${reset}"
         echo "/_/  /_//_/|_|"
+        echo ""
     fi
 }
 
@@ -446,8 +447,9 @@ subdomain_recon() {
 
     ## Combining Files
 
-    print_message "Temporary Combination"
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u > $subdomain_dir/combined_temp.txt
+    echo ""
+    print_message "First Combination (filter for living subdomains)"
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u | probe | tee $subdomain_dir/combined_temp.txt
 
     ## Subdomainizer
 
@@ -455,17 +457,20 @@ subdomain_recon() {
     [[ -f $subdomain_dir/subdomainizer.txt ]] && mv $subdomain_dir/subdomainizer.txt $subdomain_dir/subdomainizer.old
     [[ -f $subdomain_dir/subdomainizer_info.txt ]] && mv $subdomain_dir/subdomainizer_info.txt $subdomain_dir/subdomainizer_info.old
 
-    subdomainizer -l $subdomain_dir/combined_temp.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
+    subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
     grep "Found some secrets(might be false positive)..." -A 1000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
 
     my_diff $subdomain_dir/subdomainizer.old $subdomain_dir/subdomainizer.txt "subdomainizer"
     my_diff $subdomain_dir/subdomainizer_info.old $subdomain_dir/subdomainizer_info.txt "subdomainizer leaks"
-    
+
     ## Combining Files
 
     print_message "Combining Temp Combination with Subdomainizer Report"
-    cat $subdomain_dir/combined_temp.txt $subdomain_dir/subdomainizer.txt | sort -u > $subdomain_dir/combined_subdomains.txt
-    rm $subdomain_dir/combined_temp.txt
+    
+    {
+        cat $subdomain_dir/combined_first.txt
+        cat $subdomain_dir/subdomainizer.txt | probe
+    } | sort -u | tee $subdomain_dir/combined_subdomains.txt
 
     ## Subfinder recursive
 
@@ -479,32 +484,42 @@ subdomain_recon() {
     ## Combining Files
 
     print_message "Recursive Combination"
-    cat $subdomain_dir/combined_subdomains.txt $subdomain_dir/subfinder_recursive.txt | sort -u > $subdomain_dir/combined_recursive.txt
-
+    {
+        cat $subdomain_dir/combined_subdomains.txt 
+        cat $subdomain_dir/subfinder_recursive.txt | probe
+    } | sort -u > $subdomain_dir/combined_recursive.txt
+    
     ## GoAltDNS
 
     print_task "Running 'goaltdns'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/goaltdns.txt")"
     [[ -f $subdomain_dir/goaltdns.txt ]] && mv $subdomain_dir/goaltdns.txt $subdomain_dir/goaltdns.old
     
-    goaltdns -l $subdomain_dir/combined_recursive.txt -w $brute_wordlist -o $subdomain_dir/goaltdns.txt
+    goaltdns -l $subdomain_dir/combined_recursive.txt -w $brute_wordlist | probe | tee $subdomain_dir/goaltdns.txt
 
     my_diff $subdomain_dir/goaltdns.old $subdomain_dir/goaltdns.txt "goaltdns"
 
     ## Final Combination
 
     [[ -r $subdomain_dir/final_subdomains.txt ]] && mv $subdomain_dir/final_subdomains.txt $subdomain_dir/final_subdomains.old
-    [[ -r $subdomain_dir/final_subdomains_stripped.txt ]] && mv $subdomain_dir/final_subdomains_stripped.txt $subdomain_dir/final_subdomains_stripped.old
+    [[ -r $subdomain_dir/final_live.txt ]] && mv $subdomain_dir/final_live.txt $subdomain_dir/final_live.old
+    [[ -r $subdomain_dir/final_live_stripped.txt ]] && mv $subdomain_dir/final_live_stripped.txt $subdomain_dir/final_live_stripped.old
 
-    print_message "Final Combination..."
+    print_task "Combining unverified & live subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/")"
     
-    ## Filter with scope regex if available
+    ## Filter with scope regex if available + combine live subdomains
 
     if [[ $scope_regex ]]; then
-        print_warning "Filtering out out-of-scope domains" 
-        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_subdomains.txt
+        print_warning "Filtering out out-of-scope domains"
+        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_live.txt
+        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | extract_url | grep -Ev "$scope_regex" > $subdomain_dir/final_live_stripped.txt
     else
         cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_subdomains.txt
+        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | extract_url > $subdomain_dir/final_subdomains_stripped.txt
     fi
+
+    ## Combine unverified subdomains
+
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt $subdomain_dir/goaltdns.txt | extract_url > $subdomain_dir/final_subdomains.txt
 
     ## New Subdomains
 
@@ -514,34 +529,32 @@ subdomain_recon() {
         cat $subdomain_dir/final_subdomains.txt > $subdomain_dir/new_subdomains.txt
     fi
 
-    ## Check for live subdomains
+    ## New Live Subdomains
 
-    print_task "Running 'httprobe' (looking for live subdomains)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/live_subdomains.txt")"
-
-    cat $subdomain_dir/new_subdomains.txt | probe | tee "$subdomain_dir/live_subdomains.txt"
-    
-    ## Strip subdomains
-
-    cat $subdomain_dir/final_subdomains.txt | extract_url > $subdomain_dir/final_subdomains_stripped.txt
+    if [[ -f $subdomain_dir/final_live.old ]]; then
+        cat $subdomain_dir/final_live.txt | anew $subdomain_dir/final_live.old -d > $subdomain_dir/new_live.txt
+    else
+        cat $subdomain_dir/final_live.txt > $subdomain_dir/new_live.txt
+    fi
 
     ## Count and output new subdomains
 
     new_subdomain_count=$(wc -l "$subdomain_dir/new_subdomains.txt" | cut -d ' ' -f 1)
-    live_subdomain_count=$(wc -l "$subdomain_dir/live_subdomains.txt" | extract_url | cut -d ' ' -f 1)
+    live_subdomain_count=$(wc -l "$subdomain_dir/new_live.txt" | extract_url | cut -d ' ' -f 1)
 
     send_to_discord "Discovered \`$new_subdomain_count\` **NEW** subdomains:" $subdomain_webhook "$subdomain_dir/new_subdomains.txt" 
-    send_to_discord "Live subdomains (\`$live_subdomain_count\`):" $subdomain_webhook "$subdomain_dir/live_subdomains.txt" 
+    send_to_discord "Live subdomains (\`$live_subdomain_count\`):" $subdomain_webhook "$subdomain_dir/new_live.txt" 
     
     print_message "Discoverd $new_subdomain_count NEW subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/new_subdomains.txt")"
     print_message "Live subdomains ($live_subdomain_count):"
-    cat $subdomain_dir/live_subdomains.txt
+    cat $subdomain_dir/new_live.txt
 
     ## DNSReaper Subdomain Takeovers
 
     print_task "Running 'dnsreaper' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/dnsreaper-takeovers.json")"
     [[ -r "$subdomain_dir/dnsreaper-takeovers.json" ]] && mv "$subdomain_dir/dnsreaper-takeovers.json" "$subdomain_dir/dnsreaper-takeovers.old"
 
-    dnsreaper file --filename "$subdomain_dir/live_subdomains.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.txt"
+    dnsreaper file --filename "$subdomain_dir/new_live.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.txt"
 
     if [[ -r "$subdomain_dir/dnsreaper-takeovers.old" ]]; then
         my_diff "$subdomain_dir/dnsreaper-takeovers.old" "$subdomain_dir/dnsreaper-takeovers.json" "DNSReaper (subdomain takeovers)" $subdomain_webhook
@@ -558,7 +571,7 @@ subdomain_recon() {
     print_task "Running 'nuclei -tags takeover' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/nuclei_takeovers.txt")"
     [[ -r "$subdomain_dir/nuclei_takeovers.txt" ]] && mv "$subdomain_dir/nuclei_takeovers.txt" "$subdomain_dir/nuclei_takeovers.old"
 
-    nuclei -tags takeover -l "$subdomain_dir/live_subdomains.txt" -o "$subdomain_dir/nuclei_takeovers.txt"
+    nuclei -tags takeover -l "$subdomain_dir/new_live.txt" -o "$subdomain_dir/nuclei_takeovers.txt"
 
     if [[ -r "$subdomain_dir/nuclei_takeovers.old" ]]; then
         my_diff "$subdomain_dir/nuclei_takeovers.old" "$subdomain_dir/nuclei_takeovers.txt" "Nuclei (subdomain takeovers)" $subdomain_webhook
@@ -586,7 +599,7 @@ subdomain_screenshot() {
 
     ## Take The Screenshots
 
-    if [[ -f $subdomain_dir/live_subdomains.txt && $(cat $subdomain_dir/live_subdomains.txt) ]]; then
+    if [[ -f $subdomain_dir/new_live.txt && $(cat $subdomain_dir/new_live.txt) ]]; then
 
         screenshots=($(ls $screenshot_dir/*.png 2> /dev/null))
 
@@ -596,8 +609,8 @@ subdomain_screenshot() {
             mv $screenshot_dir/*.png $screenshot_dir/old/
         done
 
-        gowitness file -f $subdomain_dir/live_subdomains.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/gowitness_db.sqlite3
-        
+        gowitness file -f $subdomain_dir/new_live.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/gowitness_db.sqlite3
+
         screenshots=($(ls $screenshot_dir/*.png))
 
         if [[ $screenshot_webhook ]]; then
@@ -1320,6 +1333,12 @@ reports() {
         for file in "${available_files[@]}"; do
             available_subreports+=($(echo $file | sed "s@$dir\/@@"))
         done
+
+        available_subreports=($(
+            for subreport in "${available_subreports[@]}"; do
+                echo $subreport
+            done | sort
+        ))
 
         if [[ $available_subreports ]]; then
             print_message "Available sub-reports:"
