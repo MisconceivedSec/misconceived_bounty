@@ -1,4 +1,4 @@
-# MisconceivedRecon (`misconceived_recon.sh`)
+# MisconceivedRecon
 
 ![Screenshot](./images/screenshot.png)
 
