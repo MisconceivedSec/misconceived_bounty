@@ -456,9 +456,14 @@ The `gdork` function generates github dorking links, copies them to the clipboar
 
 # TODO
 
+- [ ] Replace `httprobe` with `httpx`
+- [ ] Change the way the dependecies are checked:
+    - All dependencies in an array
+    - Loop through the array and verify
 - [ ] Add `logs` function so one doesn't have to fiddle with the terribly named log files
 - [ ] Change the use of `file.old` to `/old/file.txt`
 - [ ] Add web technology fingerprinting to the `fingerprint` function
 - [ ] Add more `nuclei` vulnerability scans
 - [ ] Add a local registry that contains names of targets as well as their configuration files (maybe a `register` function)
-- [x] Add pager option (output like `less`) to `report` function
+- [ ] Add an option to add custom scans
+- [x] ~~Add pager option (output like `less`) to `report` function~~
