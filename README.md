@@ -94,7 +94,7 @@ Parse -h or -help with each mode/function for more information
 - [`goaltdns`](https://github.com/subfinder/goaltdns)
 - [`gobuster`](https://github.com/OJ/gobuster)
 - [`gowitness`](https://github.com/sensepost/gowitness)
-- [`httprobe`](https://github.com/tomnomnom/httprobe)
+- [`httpx`](https://github.com/projectdiscovery/httpx)
 - [`nmap`](https://nmap.org/download)
 - [`nslookup`](https://www.nslookup.io/)
 - [`nuclei`](https://github.com/projectdiscovery/nuclei) & [`nuclei-templates`](https://github.com/projectdiscovery/nuclei-templates)
@@ -414,7 +414,7 @@ The following tools are executed:
 5. `subdomainizer.py`
 6. `subfinder` (recursive)
 7. `goaltdns`
-8. `httprobe` (Verifies that the subdomains are alive)
+8. `httpx` (Verifies that the subdomains are alive)
 
 ##### Subdomain Takeover Detection
 
@@ -456,14 +456,12 @@ The `gdork` function generates github dorking links, copies them to the clipboar
 
 # TODO
 
-- [ ] Replace `httprobe` with `httpx`
-- [ ] Change the way the dependecies are checked:
-    - All dependencies in an array
-    - Loop through the array and verify
 - [ ] Add `logs` function so one doesn't have to fiddle with the terribly named log files
 - [ ] Change the use of `file.old` to `/old/file.txt`
 - [ ] Add web technology fingerprinting to the `fingerprint` function
 - [ ] Add more `nuclei` vulnerability scans
 - [ ] Add a local registry that contains names of targets as well as their configuration files (maybe a `register` function)
 - [ ] Add an option to add custom scans
+- [x] Replace `httprobe` with `httpx`
+- [x] Change the way the dependecies are checked:
 - [x] ~~Add pager option (output like `less`) to `report` function~~
