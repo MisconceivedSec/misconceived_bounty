@@ -284,7 +284,8 @@ help() {
 }
 
 probe() {
-    httprobe -p http:8080 -p http:8000 -p http:8008 -p http:8081 -p http:8888 -p http:8088 -p http:8880 -p http:8001 -p http:8082 -p http:8787 -p https:8443 -p https:8444 -p https:9443 -p https:4433 -p https:4343
+    # httprobe -p http:8080 -p http:8000 -p http:8008 -p http:8081 -p http:8888 -p http:8088 -p http:8880 -p http:8001 -p http:8082 -p http:8787 -p https:8443 -p https:8444 -p https:9443 -p https:4433 -p https:4343
+    httpx
 }
 
 extract_url() {
@@ -554,7 +555,7 @@ subdomain_recon() {
     print_task "Running 'dnsreaper' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/dnsreaper-takeovers.json")"
     [[ -r "$subdomain_dir/dnsreaper-takeovers.json" ]] && mv "$subdomain_dir/dnsreaper-takeovers.json" "$subdomain_dir/dnsreaper-takeovers.old"
 
-    dnsreaper file --filename "$subdomain_dir/new_live.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.txt"
+    dnsreaper file --filename "$subdomain_dir/final_live.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.txt"
 
     if [[ -r "$subdomain_dir/dnsreaper-takeovers.old" ]]; then
         my_diff "$subdomain_dir/dnsreaper-takeovers.old" "$subdomain_dir/dnsreaper-takeovers.json" "DNSReaper (subdomain takeovers)" $subdomain_webhook
@@ -571,7 +572,7 @@ subdomain_recon() {
     print_task "Running 'nuclei -tags takeover' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/nuclei_takeovers.txt")"
     [[ -r "$subdomain_dir/nuclei_takeovers.txt" ]] && mv "$subdomain_dir/nuclei_takeovers.txt" "$subdomain_dir/nuclei_takeovers.old"
 
-    nuclei -tags takeover -l "$subdomain_dir/new_live.txt" -o "$subdomain_dir/nuclei_takeovers.txt"
+    nuclei -tags takeover -l "$subdomain_dir/final_live.txt" -o "$subdomain_dir/nuclei_takeovers.txt"
 
     if [[ -r "$subdomain_dir/nuclei_takeovers.old" ]]; then
         my_diff "$subdomain_dir/nuclei_takeovers.old" "$subdomain_dir/nuclei_takeovers.txt" "Nuclei (subdomain takeovers)" $subdomain_webhook
@@ -2003,115 +2004,14 @@ flags() {
 
 
 check_dependencies() {
-
-    if [[ ! $(which discord.sh) ]]; then
-        print_error "${bold}discord.sh${bold} (https://github.com/fieu/discord.sh) not found"
-    fi
-
-    if [[ ! $(which colordiff) ]]; then
-        print_error "${bold}colordiff${reset} not found"
-    fi    
-
-    if [[ ! $(which xclip) ]]; then
-        print_error "${bold}xclip${reset} not found"
-    fi    
-
-    if [[ ! $(which crt.sh) ]]; then
-        print_error "${bold}crt.sh${reset} not found"
-    fi    
-
-    if [[ ! $(which subfinder) ]]; then
-        print_error "${bold}subfinder${reset} not found"
-    fi    
-
-    if [[ ! $(which github-subdomains) ]]; then
-        print_error "${bold}github-subdomains${reset} not found"
-    fi    
-
-    if [[ ! $(which gobuster) ]]; then
-        print_error "${bold}gobuster${reset} not found"
-    fi    
-
-    if [[ ! $(which httprobe) ]]; then
-        print_error "${bold}httprobe${reset} not found"
-    fi    
-
-    if [[ ! $(which gobuster) ]]; then
-        print_error "${bold}gobuster${reset} not found"
-    fi    
-
-    if [[ ! $(which subdomainizer) ]]; then
-        print_error "${bold}subdomainizer${reset} not found"
-    fi    
-
-    if [[ ! $(which goaltdns) ]]; then
-        print_error "${bold}goaltdns${reset} not found"
-    fi    
-
-    if [[ ! $(which anew) ]]; then
-        print_error "${bold}anew${reset} not found"
-    fi    
-
-    if [[ ! $(which gowitness) ]]; then
-        print_error "${bold}gowitness${reset} not found"
-    fi    
-
-    if [[ ! $(which whois) ]]; then
-        print_error "${bold}whois${reset} not found"
-    fi    
-
-    if [[ ! $(which nslookup) ]]; then
-        print_error "${bold}nslookup${reset} not found"
-    fi    
-
-    if [[ ! $(which shodan) ]]; then
-        print_error "${bold}shodan${reset} not found"
-
-        if [[ ! $(shodan info &> /dev/null) ]]; then
-            print_error "Please configure ${bold}shodan${reset} by running 'shodan init <api key>'"
+    dependencies=("discord.sh" "colordiff" "xclip" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httprobe" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "nslookup" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei")
+    
+    for dependency in "${dependencies[@]}"; do
+        if [[ ! $(which $dependency) ]]; then
+            print_warning "Dependencies:" "${blue}${dependencies[*]}${reset}"
+            print_error "${bold}Missing dependency:${reset} $dependency"
         fi
-    fi
-
-    if [[ ! $(which nmap) ]]; then
-        print_error "${bold}nmap${reset} not found"
-    fi
-    
-    if [[ ! $(which waybackurls) ]]; then
-        print_error "${bold}waybackurls${reset} not found"
-    fi
-    
-    if [[ ! $(which feroxbuster) ]]; then
-        print_error "${bold}feroxbuster${reset} not found"
-    fi
-    
-    if [[ ! $(which gitrob) ]]; then
-        print_error "${bold}gitrob${reset} not found"
-    fi
-    
-    if [[ ! $(which trufflehog) ]]; then
-        print_error "${bold}trufflehog${reset} not found"
-    fi
-    
-    if [[ ! $(which jq) ]]; then
-        print_error "${bold}jq${reset} not found"
-    fi
-
-    if [[ ! $(which secretfinder) ]]; then
-        print_error "${bold}secretfinder${reset} not found"
-    fi
-    
-    if [[ ! $(which dnsreaper) ]]; then
-        print_error "${bold}dnsreaper${reset} not found"
-    fi
-    
-    if [[ ! $(which bat) ]]; then
-        print_error "${bold}bat${reset} not found"
-    fi
-    
-    if [[ ! $(which nuclei) ]]; then
-        print_error "${bold}nuclei${reset} not found"
-    fi
-    
+    done
 }
 
 ## Run functions based on flags
