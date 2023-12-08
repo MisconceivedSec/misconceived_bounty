@@ -100,9 +100,9 @@ send_to_discord() {
 
     if [[ $webhook ]]; then
         if [[ $upload_file ]]; then
-            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/4IhtWin.png' --text "$message" --file "$upload_file"
+            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/kfObIFy.png' --text "$message" --file "$upload_file"
         else
-            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/4IhtWin.png' --text "$message"
+            discord.sh --webhook-url="$webhook" --username 'MisconceivedRecon' --avatar 'https://i.imgur.com/kfObIFy.png' --text "$message"
         fi
     fi
 }
