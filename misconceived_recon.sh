@@ -456,13 +456,13 @@ subdomain_recon() {
 
     print_task "Running 'subdomainizer'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subdomainizer.txt")"
     [[ -f $subdomain_dir/subdomainizer.txt ]] && mv $subdomain_dir/subdomainizer.txt $subdomain_dir/subdomainizer.old
-    [[ -f $subdomain_dir/subdomainizer_info.txt ]] && mv $subdomain_dir/subdomainizer_info.txt $subdomain_dir/subdomainizer_info.old
+    [[ -f $subdomain_dir/subdomainizer_info.txt ]] && mv $leaks_dir/subdomainizer_info.txt $leaks_dir/subdomainizer_info.old
 
     subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
     grep "Found some secrets(might be false positive)..." -A 10000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
 
     my_diff $subdomain_dir/subdomainizer.old $subdomain_dir/subdomainizer.txt "subdomainizer"
-    my_diff $subdomain_dir/subdomainizer_info.old $subdomain_dir/subdomainizer_info.txt "subdomainizer leaks"
+    my_diff $leaks_dir/subdomainizer_info.old $leaks_dir/subdomainizer_info.txt "subdomainizer leaks"
 
     ## Combining Files
 
@@ -470,7 +470,7 @@ subdomain_recon() {
     
     {
         cat $subdomain_dir/combined_first.txt
-        cat $subdomain_dir/subdomainizer.txt | anew $(cat $subdomain_dir/combined_first.txt | extract_url) | probe
+        cat $subdomain_dir/subdomainizer.txt | anew $(cat $subdomain_dir/combined_first.txt | extract_url) -d | probe
     } | sort -u | tee $subdomain_dir/combined_subdomainizer.txt
 
     ## Subfinder recursive
@@ -487,7 +487,7 @@ subdomain_recon() {
     print_task "Combining:" "Recursive report ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
     {
         cat $subdomain_dir/combined_subdomainizer.txt 
-        cat $subdomain_dir/subfinder_recursive.txt | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) | probe
+        cat $subdomain_dir/subfinder_recursive.txt | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) -d | probe
     } | sort -u > $subdomain_dir/combined_recursive.txt
     
     ## GoAltDNS
@@ -510,12 +510,12 @@ subdomain_recon() {
     ## Filter with scope regex if available + combine live subdomains
 
     if [[ $scope_regex ]]; then
-        print_warning "Filtering out out-of-scope domains"
+        print_warning "Filtering out out-of-scope domains with regex:" "$scope_regex"
         cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_live.txt
-        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | extract_url | grep -Ev "$scope_regex" > $subdomain_dir/final_live_stripped.txt
+        cat $subdomain_dir/final_live.txt | extract_url | grep -Ev "$scope_regex" > $subdomain_dir/final_live_stripped.txt
     else
-        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_subdomains.txt
-        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | extract_url > $subdomain_dir/final_subdomains_stripped.txt
+        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_live.txt
+        cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/final_live_stripped.txt
     fi
 
     ## Combine unverified subdomains
