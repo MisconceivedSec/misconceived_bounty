@@ -96,7 +96,6 @@ Parse -h or -help with each mode/function for more information
 - [`gowitness`](https://github.com/sensepost/gowitness)
 - [`httpx`](https://github.com/projectdiscovery/httpx)
 - [`nmap`](https://nmap.org/download)
-- [`nslookup`](https://www.nslookup.io/)
 - [`nuclei`](https://github.com/projectdiscovery/nuclei) & [`nuclei-templates`](https://github.com/projectdiscovery/nuclei-templates)
 - [`secretfinder`](https://github.com/m4ll0k/SecretFinder)
 - [`shodan`](https://cli.shodan.io/) (requires API key)
@@ -109,7 +108,7 @@ Parse -h or -help with each mode/function for more information
 
 # Modes
 ## `init`
-```
+```bash
 Usage: ./misconceived_recon.sh init [OPTIONS]
 
 Flags:
@@ -117,8 +116,12 @@ Flags:
          Mandatory: Target domain
   -ght -github-token <token>
          Mandatory: GitHub Access Token
+  -u -user-agent-addition <string>
+         Add string to user-agent as per program's requirement
   -sr -scope-regex <regex>
          Regex to filter for in-scope domains
+  -ps -provided-subdomains <file>
+         File of subdomains provided by BB program
   -b -brute-wordlists <file[,file,...]>
          Wordlist(s) for subdomain brute-forcing
   -ghr -github-recon <url[,url,...]>
@@ -148,6 +151,7 @@ Flags:
   -h -help
          Standalone: Print this help message
 
+
 (Must provide all webhooks together, or none at all)
 
 Available Recon Tasks:
@@ -165,6 +169,10 @@ The `init` function is used to initiate a configuration file and folder for a sp
 
 The other optional arguments are:
 
+- `-u -user-agent-addition <string>`
+   - String to add to user-agent as per BB program's request
+- `-ps -provided-subdomains <file>`
+   - File of subdomains provided by BB program
 - `-b -brute-wordlists file[,file,...]`
    - Wordlist(s) for subdomain brute-forcing, comma separated
 - `-ghr -github-recon url[,url,...]`
@@ -203,6 +211,10 @@ Flags:
          Mandatory: <Configuration file for target>
   -t -target <domain>
          Change target domain
+  -u -user-agent-addition <string>
+         Change the string added to the user-agent required by the program
+  -ps -provided-subdomains <file>
+         Change file of subdomains provided by BB program
   -sr -scope-regex <regex>
          Regex to filter for in-scope domains
   -b -brute-wordlists <file[,file,...]>
@@ -259,6 +271,10 @@ The other optional arguments:
    - Change target domain
 - `-b -brute-wordlists file[,file,...]`
    - Add wordlist(s) for subdomain brute-forcing, comma separated
+- `-u -user-agent-addition <string>`
+   - Change string that is added to user-agent as per BB program's request
+- `-ps -provided-subdomains <file>`
+   - File of subdomains provided by BB program
 - `-ght -github-token token`
    - Change GitHub Access Token
 - `-ghr -github-recon url[,url,...]`
@@ -401,7 +417,7 @@ Flags:
 ### `subdomain`
 #### Description
 
-The `subdomain` function takes one argument (-c -config-file).<br>
+The `subdomain` function takes one argument (`-c -config-file`).<br>
 It preforms subdomain enumeration.
 The following tools are executed:
 
@@ -456,12 +472,13 @@ The `gdork` function generates github dorking links, copies them to the clipboar
 
 # TODO
 
+- [ ] Add web technology fingerprinting to the `fingerprint` function (`httpx`)
+- [ ] Add an option to add custom operations
 - [ ] Add `logs` function so one doesn't have to fiddle with the terribly named log files
-- [ ] Change the use of `file.old` to `/old/file.txt`
-- [ ] Add web technology fingerprinting to the `fingerprint` function
 - [ ] Add more `nuclei` vulnerability scans
 - [ ] Add a local registry that contains names of targets as well as their configuration files (maybe a `register` function)
-- [ ] Add an option to add custom scans
-- [x] Replace `httprobe` with `httpx`
-- [x] Change the way the dependecies are checked:
+- [ ] Change the use of `file.old` to `/old/file.txt` - Maybe
+- [x] ~~Use `httpx` for extracting IPs from domains~~
+- [x] ~~Replace `httprobe` with `httpx`~~
+- [x] ~~Change the way the dependecies are checked~~
 - [x] ~~Add pager option (output like `less`) to `report` function~~
