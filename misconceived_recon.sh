@@ -159,8 +159,12 @@ help() {
         echo "         ${bold}Mandatory:${reset} Target domain"
         echo "  ${magenta}${bold}-ght -github-token${reset} <token>"
         echo "         ${bold}Mandatory:${reset} GitHub Access Token"
+        echo "  ${magenta}${bold}-u -user-agent-addition${reset} <string>"
+        echo "         Add string to user-agent as per program's requirement"
         echo "  ${magenta}${bold}-sr -scope-regex${reset} <regex>"
         echo "         Regex to filter for in-scope domains"
+        echo "  ${magenta}${bold}-ps -provided-subdomains${reset} <file>"
+        echo "         File of subdomains provided by BB program"
         echo "  ${magenta}${bold}-b -brute-wordlists${reset} <file[,file,...]>"
         echo "         Wordlist(s) for subdomain brute-forcing"
         echo "  ${magenta}${bold}-ghr -github-recon${reset} <url[,url,...]>"
@@ -204,6 +208,10 @@ help() {
         echo "         ${bold}Mandatory:${reset} <Configuration file for target>"
         echo "  ${magenta}${bold}-t -target${reset} <domain>"
         echo "         Change target domain"
+        echo "  ${magenta}${bold}-u -user-agent-addition${reset} <string>"
+        echo "         Change the string added to the user-agent required by the program"
+        echo "  ${magenta}${bold}-ps -provided-subdomains${reset} <file>"
+        echo "         Change file of subdomains provided by BB program"
         echo "  ${magenta}${bold}-sr -scope-regex${reset} <regex>"
         echo "         Regex to filter for in-scope domains"
         echo "  ${magenta}${bold}-b -brute-wordlists${reset} <file[,file,...]>"
@@ -376,6 +384,19 @@ subdomain_recon() {
     print_announce "Subdomain Enumeration"
     start_seconds=$SECONDS
 
+    ## Check for provided subdomains
+
+    if [[ $provided_subdomains ]]; then
+        print_task "Verifying provided subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$provided_subdomains")"
+        [[ -f $subdomain_dir/provided_subdomains.txt ]] && mv $subdomain_dir/provided_subdomains.txt $subdomain_dir/provided_subdomains.old
+        
+        httpx -l $provided_subdomains -o $subdomain_dir/provided_subdomains.txt
+
+        my_diff $subdomain_dir/provided_subdomains.old $subdomain_dir/provided_subdomains.txt "Provided Subdomains"
+    else
+        print_warning "No subdomains provided by BB program"
+    fi
+
     ## crt.sh
  
     print_task "Pulling down 'crt.sh' domains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/crt_sh.txt")"
@@ -450,7 +471,21 @@ subdomain_recon() {
 
     print_task "Combining: First Combination" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_first.txt")"
 
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt | sort -u | probe | tee $subdomain_dir/combined_first.txt
+    if [[ $provided_subdomains ]]; then
+        {
+            cat $subdomain_dir/crt_sh.txt \
+            $subdomain_dir/subfinder.txt \
+            $subdomain_dir/github_subdomains.txt \
+            $subdomain_dir/gobuster.txt
+        } | anew $(cat $subdomain_dir/provided_subdomains.txt | extract_url) -d | probe | sort -u | tee $subdomain_dir/combined_first.txt
+    else
+        {
+            cat $subdomain_dir/crt_sh.txt \
+            $subdomain_dir/subfinder.txt \
+            $subdomain_dir/github_subdomains.txt \
+            $subdomain_dir/gobuster.txt
+        } | probe | sort -u | tee $subdomain_dir/combined_first.txt
+    fi
 
     ## Subdomainizer
 
@@ -610,7 +645,7 @@ subdomain_screenshot() {
             mv $screenshot_dir/*.png $screenshot_dir/old/
         done
 
-        gowitness file -f $subdomain_dir/new_live.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/gowitness_db.sqlite3
+        gowitness file -f $subdomain_dir/new_live.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/gowitness_db.sqlite3 --user-agent "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
 
         screenshots=($(ls $screenshot_dir/*.png))
 
@@ -658,27 +693,23 @@ fingerprint_recon() {
 
         cat $fingerprint_dir/new_whois_report.txt >> $fingerprint_dir/whois_report.txt
 
-        ## Extract IPs of URLs
+        ## Extract IPs from URLs
 
-        print_task "Extracting IP Addresses of Discovered Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/IPs.txt")"
+        print_task "Extracting IP Addresses from Discovered Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/IPs.txt")"
 
-        new_subdomains=($(cat $subdomain_dir/new_subdomains.txt))
-
-        for url in "${new_subdomains[@]}"; do
-            nslookup $url | grep "Address: " | head -1 | sed -e "s/Address:\ //"
-        done | tee $fingerprint_dir/IPs.txt
+        httpx -l $subdomain_dir/new_subdomains.txt -ip -o $fingerprint_dir/IPs.txt
 
         ## SHODAN
 
         print_task "Generating Shodan Report" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/shodan_report.txt")"
 
-        ips=($(cat $fingerprint_dir/IPs.txt))
+        while read -r domain_ip; do
+            ip=$(echo $domain_ip | cut -d '[' -f2 | sed 's/]//')
 
-        for i in "${!ips[@]}"; do
-            echo -e "==============>> ${ips[$i]} (${new_subdomains[$i]}) report <<=============="
-            shodan host "${ips[$i]}"
+            echo -e "==============>> $domain_ip report <<=============="
+            shodan host "$ip"
             echo -e "\n\n"
-        done | tee $fingerprint_dir/new_shodan_report.txt
+        done < $fingerprint_dir/IPs.txt | tee $fingerprint_dir/new_shodan_report.txt
 
         if [[ $fingerprint_webhook ]]; then
             print_message "Uploading:" "Shodan Reports..."
@@ -745,7 +776,7 @@ deep_domain_recon() {
             print_task "Running 'feroxbuster' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/feroxbuster.txt")"
             [[ -f $deep_dir/$domain/feroxbuster.txt ]] && mv $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/feroxbuster.old
         
-            feroxbuster -u $domain -t 20 -L 20 -w ${fuzz_wordlist[$i]} -o $deep_dir/$domain/feroxbuster.txt
+            feroxbuster -a "$uaa feroxbuster/latest" -u $domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
             echo ""
 
             my_diff $deep_dir/$domain/feroxbuster.old $deep_dir/$domain/feroxbuster.txt "feroxbuster" $deep_domain_webhook
@@ -1016,6 +1047,8 @@ init() {
         \"target\": \"$input_target\",
         \"recon_path\": \"$recon_dir\",
         \"scope_regex\": \"$input_scope_regex\",
+        \"user_agent_addition\": \"$input_uaa\",
+        \"provided_subdomains\": \"$input_provided_subdomains\",
         \"subdomain_brute_wordlist\": [ 
             \"$brute_wordlist\" 
         ],
@@ -1175,10 +1208,24 @@ config() {
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
    
-    ## Change Target
+    ## Change Scope regex
 
     if [[ $input_scope_regex ]]; then
         jq --arg regex "$input_scope_regex" ".config.scope_regex = \$regex" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+        mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+    fi
+    
+    ## Change User-Agent string
+
+    if [[ $input_uaa ]]; then
+        jq ".config.user_agent_addition = \"$input_uaa\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+        mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+    fi
+
+    ## Change provided subdomains file
+
+    if [[ $input_provided_subdomains ]]; then
+        jq ".config.provided_subdomains = \"$input_provided_subdomains\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
@@ -1377,6 +1424,9 @@ init_vars() {
 
     target=$(jq -r '.config.target' $config_file)
 
+    uaa=$(jq -r '.config.user_agent_addition' $config_file)
+
+    provided_subdomains=$(jq -r '.config.provided_subdomains' $config_file)
     scope_regex=$(jq -r '.config.scope_regex' $config_file)
     brute_wordlists=($(jq -r '.config.subdomain_brute_wordlist[]' $config_file))
 
@@ -1474,6 +1524,24 @@ flags() {
                             input_target="$1"
                         else
                             print_error "-t|-target requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -u|-user-agent-addition)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_uaa="$1"
+                        else
+                            print_error "-u|-user-agent-addition requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ps|-provided-subdomains)
+                        shift
+                        if [[ "$1" != -?* && -r "$1" ]]; then
+                            input_provided_subdomains="$1"
+                        else
+                            print_error "-ps|-provided-subdomains requires a valid path!"
                         fi
                         shift
                         ;;
@@ -1652,6 +1720,24 @@ flags() {
                             input_scope_regex="$1"
                         else
                             print_error "-sr|-scope-regex requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -u|-user-agent-addition)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_uaa="$1"
+                        else
+                            print_error "-u|-user-agent-addition requires an argument!"
+                        fi
+                        shift
+                        ;;
+                    -ps|-provided-subdomains)
+                        shift
+                        if [[ "$1" != -?* && -r "$1" ]]; then
+                            input_provided_subdomains="$1"
+                        else
+                            print_error "-ps|-provided-subdomains requires a valid path!"
                         fi
                         shift
                         ;;
@@ -2002,23 +2088,151 @@ flags() {
     esac
 }
 
-
 check_dependencies() {
-    dependencies=("discord.sh" "colordiff" "xclip" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httprobe" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "nslookup" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei")
+    dependencies=("discord.sh" "colordiff" "xclip" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httpx" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei")
+    missing_depends=()
     
     for dependency in "${dependencies[@]}"; do
-        if [[ ! $(which $dependency) ]]; then
-            print_warning "Dependencies:" "${blue}${dependencies[*]}${reset}"
-            print_error "${bold}Missing dependency:${reset} $dependency"
+        if [[ ! $(which $dependency 2> /dev/null) ]]; then
+            print_error "${bold}Missing dependency:${reset} $dependency" no_exit
+            missing="true"
+            missing_depends+=("$dependency")
         fi
     done
+
+    if [[ $missing ]]; then
+    
+    print_warning "Missing Dependencies:" "${blue}${missing_depends[*]}${reset}"
+        
+        print_message "Would you like to install the dependecies?"
+        prompt "[y/N]:"
+        
+        if [[ $userinput = "y" || $userinput = "Y" ]]; then
+            print_message "Preparing for installations"
+            apt update
+
+            print_sub "Intalling:" "Go"
+            if [[ ! $(which go) ]]; then
+                sudo apt install golang-go
+            fi
+
+            if [[ ! $(which discord.sh) ]]; then
+                print_message "Installing:" "discord.sh"
+                
+                git clone https://github.com/fieu/discord.sh ~/discord.sh
+                sudo ln -s ~/discord.sh/discord.sh /usr/bin/discord.sh
+            fi
+
+            if [[ ! $(which colordiff) ]]; then
+                print_message "Installing:" "colordiff"
+            fi    
+
+            if [[ ! $(which xclip) ]]; then
+                print_error "${bold}xclip${reset} not found"
+            fi    
+
+            if [[ ! $(which crt.sh) ]]; then
+                print_error "${bold}crt.sh${reset} not found"
+            fi    
+
+            if [[ ! $(which subfinder) ]]; then
+                print_error "${bold}subfinder${reset} not found"
+            fi    
+
+            if [[ ! $(which github-subdomains) ]]; then
+                print_error "${bold}github-subdomains${reset} not found"
+            fi    
+
+            if [[ ! $(which gobuster) ]]; then
+                print_error "${bold}gobuster${reset} not found"
+            fi    
+
+            if [[ ! $(which httpx) ]]; then
+                print_error "${bold}httpx${reset} not found"
+            fi    
+
+            if [[ ! $(which gobuster) ]]; then
+                print_error "${bold}gobuster${reset} not found"
+            fi    
+
+            if [[ ! $(which subdomainizer) ]]; then
+                print_error "${bold}subdomainizer${reset} not found"
+            fi    
+
+            if [[ ! $(which goaltdns) ]]; then
+                print_error "${bold}goaltdns${reset} not found"
+            fi    
+
+            if [[ ! $(which anew) ]]; then
+                print_error "${bold}anew${reset} not found"
+            fi    
+
+            if [[ ! $(which gowitness) ]]; then
+                print_error "${bold}gowitness${reset} not found"
+            fi    
+
+            if [[ ! $(which whois) ]]; then
+                print_error "${bold}whois${reset} not found"
+            fi    
+
+            if [[ ! $(which shodan) ]]; then
+                print_error "${bold}shodan${reset} not found"
+
+                if [[ ! $(shodan info &> /dev/null) ]]; then
+                    print_error "Please configure ${bold}shodan${reset} by running 'shodan init <api key>'"
+                fi
+            fi
+
+            if [[ ! $(which nmap) ]]; then
+                print_error "${bold}nmap${reset} not found"
+            fi
+
+            if [[ ! $(which waybackurls) ]]; then
+                print_error "${bold}waybackurls${reset} not found"
+            fi
+
+            if [[ ! $(which feroxbuster) ]]; then
+                print_error "${bold}feroxbuster${reset} not found"
+            fi
+
+            if [[ ! $(which gitrob) ]]; then
+                print_error "${bold}gitrob${reset} not found"
+            fi
+
+            if [[ ! $(which trufflehog) ]]; then
+                print_error "${bold}trufflehog${reset} not found"
+            fi
+
+            if [[ ! $(which jq) ]]; then
+                print_error "${bold}jq${reset} not found"
+            fi
+
+            if [[ ! $(which secretfinder) ]]; then
+                print_error "${bold}secretfinder${reset} not found"
+            fi
+
+            if [[ ! $(which dnsreaper) ]]; then
+                print_error "${bold}dnsreaper${reset} not found"
+            fi
+
+            if [[ ! $(which bat) ]]; then
+                print_error "${bold}bat${reset} not found"
+            fi
+
+            if [[ ! $(which nuclei) ]]; then
+                print_error "${bold}nuclei${reset} not found"
+            fi
+        else
+            print_error "Dependecies not installed"
+        fi
+    fi
 }
 
 ## Run functions based on flags
 
-check_dependencies
-
 flags "$@"
+
+check_dependencies
 
 case $mode in
     init) init
