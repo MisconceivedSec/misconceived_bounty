@@ -278,7 +278,8 @@ help() {
         echo "    ${cyan}recon  ${yellow}=>${reset} Run recon based on configuration file"
         echo "    ${cyan}report ${yellow}=>${reset} Show reports and subreports of enumeration tasks"
         echo ""
-        echo "${green}${bold}Functions:${reset}"    
+        echo "${green}${bold}Functions:${reset}"
+        echo "    ${cyan}depend      ${yellow}=>${reset} Check for dependencies and install them"
         echo "    ${cyan}subdomain   ${yellow}=>${reset} Subdomain Recon"
         echo "    ${cyan}screenshot  ${yellow}=>${reset} Screenshots of Subdomains"
         echo "    ${cyan}fingerprint ${yellow}=>${reset} Fingerprint/Service Scan"
@@ -375,8 +376,12 @@ github_dorking_links() {
         echo "https://github.com/search?q=\"${org}\"+snyk&type=Code"
     } > ${recon_dir}/github_dorking_links.txt
 
-    cat ${recon_dir}/github_dorking_links.txt | xclip -selection clipboard
-    print_task "GitHub Dorking Links Copied" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking.txt")"
+    if [[ ! $(which xclip) ]]; then
+        cat ${recon_dir}/github_dorking_links.txt | xclip -selection clipboard
+        print_task "GitHub Dorking Links Copied" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking.txt")"
+    else
+        print_task "GitHub Dorking Links Generated" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking.txt")"
+    fi
 }
 
 subdomain_recon() {
@@ -799,7 +804,7 @@ deep_domain_recon() {
             for url in "${findings[@]}"; do
 
                 filename=$(echo $url | sed -e "s/https:\/\///g" -e "s/http:\/\///g")
-                sudo -u kali secretfinder -i $url -e -o $deep_dir/$domain/secretfinder/${filename}.html
+                secretfinder -i $url -e -o $deep_dir/$domain/secretfinder/${filename}.html
             
             done
 
@@ -2013,6 +2018,8 @@ flags() {
                 shift
             done
             ;;
+        depend) mode="depend"
+            ;;
         test)
             mode="test"
             shift
@@ -2088,8 +2095,8 @@ flags() {
     esac
 }
 
-check_dependencies() {
-    dependencies=("discord.sh" "colordiff" "xclip" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httpx" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei")
+depend() {
+    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httpx" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei")
     missing_depends=()
     
     for dependency in "${dependencies[@]}"; do
@@ -2101,126 +2108,180 @@ check_dependencies() {
     done
 
     if [[ $missing ]]; then
+
+        [[ -d ~/.mcr_depend ]] && mkdir ~/.mcr_depend
     
-    print_warning "Missing Dependencies:" "${blue}${missing_depends[*]}${reset}"
+        print_warning "Missing Dependencies:" "${blue}${missing_depends[*]}${reset}"
         
         print_message "Would you like to install the dependecies?"
         prompt "[y/N]:"
         
         if [[ $userinput = "y" || $userinput = "Y" ]]; then
             print_message "Preparing for installations"
-            apt update
+            sudo apt update
 
-            print_sub "Intalling:" "Go"
             if [[ ! $(which go) ]]; then
+                print_sub "Intalling:" "Go"
                 sudo apt install golang-go
+
+                echo "export GO111MODULE=on" >> .bashrc
             fi
 
             if [[ ! $(which discord.sh) ]]; then
                 print_message "Installing:" "discord.sh"
                 
-                git clone https://github.com/fieu/discord.sh ~/discord.sh
-                sudo ln -s ~/discord.sh/discord.sh /usr/bin/discord.sh
+                git clone https://github.com/fieu/discord.sh ~/.mcr_depend/discord.sh
+                sudo ln -s $HOME/.mcr_depend/discord.sh/discord.sh /usr/bin/discord.sh
             fi
 
             if [[ ! $(which colordiff) ]]; then
                 print_message "Installing:" "colordiff"
-            fi    
-
-            if [[ ! $(which xclip) ]]; then
-                print_error "${bold}xclip${reset} not found"
+                sudo apt install colordiff
             fi    
 
             if [[ ! $(which crt.sh) ]]; then
-                print_error "${bold}crt.sh${reset} not found"
+                print_message "Installing:" "crt.sh"
+
+                git clone https://github.com/misconceivedsec/crt.sh ~/.mcr_depend/crt.sh
+                sudo ln -s $HOME/.mcr_depend/crt.sh /usr/bin/crt.sh
             fi    
 
             if [[ ! $(which subfinder) ]]; then
-                print_error "${bold}subfinder${reset} not found"
+                print_message "Installing:" "subfinder"
+
+                go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
             fi    
 
             if [[ ! $(which github-subdomains) ]]; then
-                print_error "${bold}github-subdomains${reset} not found"
+                print_message "Installing:" "github-subdomains"
+
+                git clone https://github.com/gwen001/github-search ~/.mcr_depend/github-search
+                sudo ln -s $HOME/.mcr_depend/github-search/github-subdomains.py /usr/bin/github-subdomains
             fi    
 
             if [[ ! $(which gobuster) ]]; then
-                print_error "${bold}gobuster${reset} not found"
+                print_message "Installing:" "gobuster"
+
+                go install github.com/OJ/gobuster/v3@latest
             fi    
 
             if [[ ! $(which httpx) ]]; then
-                print_error "${bold}httpx${reset} not found"
-            fi    
+                print_message "Installing:" "httpx"
 
-            if [[ ! $(which gobuster) ]]; then
-                print_error "${bold}gobuster${reset} not found"
+                go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
             fi    
 
             if [[ ! $(which subdomainizer) ]]; then
-                print_error "${bold}subdomainizer${reset} not found"
+                print_message "Installing:" "subdomainizer"
+
+                git clone git clone https://github.com/nsonaniya2010/SubDomainizer.git ~/.mcr_depend/subdomainizer
+                cd ~/.mcr_depend/subdomainizer
+                python3 -m pip install -r requirements.txt
+                cd -
+                sudo ln -s $HOME/.mcr_depend/subdomainizer/SubDomainizer.py /usr/bin/subdomainizer
             fi    
 
             if [[ ! $(which goaltdns) ]]; then
-                print_error "${bold}goaltdns${reset} not found"
+                print_message "Installing:" "goaltdns"
+
+                go install -v github.com/subfinder/goaltdns@latest
             fi    
 
             if [[ ! $(which anew) ]]; then
-                print_error "${bold}anew${reset} not found"
-            fi    
+                print_message "Installing:" "anew"
+
+                go install -v github.com/tomnomnom/anew@latest
+            fi
 
             if [[ ! $(which gowitness) ]]; then
-                print_error "${bold}gowitness${reset} not found"
+                print_message "Installing:" "gowitness"
+
+                sudo apt install chromium-browser
+                go install github.com/sensepost/gowitness@latest
             fi    
 
             if [[ ! $(which whois) ]]; then
-                print_error "${bold}whois${reset} not found"
+                print_message "Installing:" "whois"
+
+                sudo apt install whois
             fi    
 
             if [[ ! $(which shodan) ]]; then
-                print_error "${bold}shodan${reset} not found"
+                print_message "Installing:" "shodan"
+
+                python3 -m pip install shodan
 
                 if [[ ! $(shodan info &> /dev/null) ]]; then
-                    print_error "Please configure ${bold}shodan${reset} by running 'shodan init <api key>'"
+                    print_message "Please configure ${bold}shodan${reset} by running 'shodan init <api key>'" no_exit
                 fi
             fi
 
             if [[ ! $(which nmap) ]]; then
-                print_error "${bold}nmap${reset} not found"
+                print_message "Installing:" "nmap"
+
+                sudo apt install nmap
             fi
 
             if [[ ! $(which waybackurls) ]]; then
-                print_error "${bold}waybackurls${reset} not found"
+                print_message "Installing:" "waybackurls"
+
+                go install -v github.com/tomnomnom/waybackurls@latest
             fi
 
             if [[ ! $(which feroxbuster) ]]; then
-                print_error "${bold}feroxbuster${reset} not found"
+                print_message "Installing:" "feroxbuster"
+
+                curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | sudo bash -s /usr/bin
             fi
 
             if [[ ! $(which gitrob) ]]; then
-                print_error "${bold}gitrob${reset} not found"
+                print_message "Installing:" "gitrob"
+
+                go install -v github.com/michenriksen/gitrob@latest
             fi
 
             if [[ ! $(which trufflehog) ]]; then
-                print_error "${bold}trufflehog${reset} not found"
+                print_message "Installing:" "trufflehog"
+
+                curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sudo sh -s -- -b /usr/bin
             fi
 
             if [[ ! $(which jq) ]]; then
-                print_error "${bold}jq${reset} not found"
+                print_message "Installing:" "jq"
+
+                sudo apt install jq
             fi
 
             if [[ ! $(which secretfinder) ]]; then
-                print_error "${bold}secretfinder${reset} not found"
+                print_message "Installing:" "secretfinder"
+
+                git clone https://github.com/m4ll0k/SecretFinder.git ~/.mcr_depend/secretfinder
+                cd ~/.mcr_depend/secretfinder
+                python3 -m pip install -r requirements.txt
+                sudo ln -s $HOME/.mcr_depend/secretfinder/SecretFinder.py /usr/bin/secretfinder
+                cd -
             fi
 
             if [[ ! $(which dnsreaper) ]]; then
-                print_error "${bold}dnsreaper${reset} not found"
+                print_message "Installing:" "dnsreaper"
+
+                git clone https://github.com/punk-security/dnsReaper ~/.mcr_depend/dnsreaper
+                cd ~/.mcr_depend/dnsreaper
+                python3 -m pip install -r requirements.txt
+                sudo ln -s $HOME/.mcr_depend/dnsreaper/main.py /usr/bin/dnsreaper
             fi
 
             if [[ ! $(which bat) ]]; then
-                print_error "${bold}bat${reset} not found"
+                print_message "Installing:" "bat"
+
+                sudo apt install bat
             fi
 
             if [[ ! $(which nuclei) ]]; then
-                print_error "${bold}nuclei${reset} not found"
+                print_message "${bold}nuclei${reset} not found"
+
+                go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+                nuclei -ut
             fi
         else
             print_error "Dependecies not installed"
@@ -2232,7 +2293,7 @@ check_dependencies() {
 
 flags "$@"
 
-check_dependencies
+depend
 
 case $mode in
     init) init
@@ -2254,6 +2315,8 @@ case $mode in
     gdork) github_dorking_links
         ;;
     test) func_wrapper _test "Test"
+        ;;
+    depend) func_wqrapper depend "Dependencies"
         ;;
     *) print_error "Invalid mode \"${mode}\"!"
         ;;
