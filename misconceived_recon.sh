@@ -392,7 +392,7 @@ subdomain_recon() {
     ## Check for provided subdomains
 
     if [[ $provided_subdomains ]]; then
-        print_task "Verifying provided subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$provided_subdomains")"
+        print_task "Verifying provided subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/provided_subdomains.txt")"
         [[ -f $subdomain_dir/provided_subdomains.txt ]] && mv $subdomain_dir/provided_subdomains.txt $subdomain_dir/provided_subdomains.old
         
         httpx -l $provided_subdomains -o $subdomain_dir/provided_subdomains.txt
@@ -2296,7 +2296,7 @@ depend() {
             print_error "Dependecies not installed"
         fi
     else
-        print_message "All dependencies installed"
+        [[ $mode = "depend" ]] && print_message "All dependencies installed"
     fi
 }
 
