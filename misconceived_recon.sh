@@ -1486,7 +1486,7 @@ func_wrapper() {
     scan_name=$2
     tasks_start_seconds=$SECONDS
 
-    init_vars
+    [[ $command = "depend" ]] || init_vars
 
     start_date=$(my_date)
     logfile="$logs_dir/$scan_name ($start_date).log"
