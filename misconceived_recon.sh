@@ -2286,6 +2286,8 @@ depend() {
         else
             print_error "Dependecies not installed"
         fi
+    else
+        print_message "All dependencies installed"
     fi
 }
 
