@@ -2293,7 +2293,7 @@ depend() {
 
 flags "$@"
 
-depend
+[[ $mode = "depend" ]] || depend
 
 case $mode in
     init) init
@@ -2316,7 +2316,7 @@ case $mode in
         ;;
     test) func_wrapper _test "Test"
         ;;
-    depend) func_wqrapper depend "Dependencies"
+    depend) func_wrapper depend "Dependencies"
         ;;
     *) print_error "Invalid mode \"${mode}\"!"
         ;;
