@@ -1010,7 +1010,7 @@ init() {
 
     ## Create Directories
 
-    recon_dir="$path/${target}-recon"
+    recon_dir="$path/${input_target}-recon"
     
     [[ -d "$recon_dir" ]] || mkdir "$recon_dir"
     [[ -d "$recon_dir/subdomains" ]] || mkdir "$recon_dir/subdomains"
