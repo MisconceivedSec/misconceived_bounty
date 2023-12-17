@@ -1486,10 +1486,14 @@ func_wrapper() {
     scan_name=$2
     tasks_start_seconds=$SECONDS
 
-    [[ $command = "depend" ]] || init_vars
-
     start_date=$(my_date)
-    logfile="$logs_dir/$scan_name ($start_date).log"
+
+    if [[ $command = "depend" ]]; then
+        logfile="./$scan_name ($start_date).log"
+    else
+        init_vars
+        logfile="$logs_dir/$scan_name ($start_date).log"
+    fi
 
     wait_for_internet
     
@@ -2096,7 +2100,7 @@ flags() {
 }
 
 depend() {
-    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httpx" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei")
+    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httpx" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei" "ping")
     missing_depends=()
     
     for dependency in "${dependencies[@]}"; do
@@ -2137,6 +2141,11 @@ depend() {
             if [[ ! $(which colordiff) ]]; then
                 print_message "Installing:" "colordiff"
                 sudo apt install colordiff
+            fi    
+
+            if [[ ! $(which ping) ]]; then
+                print_message "Installing:" "ping"
+                sudo apt install iputils-ping
             fi    
 
             if [[ ! $(which crt.sh) ]]; then
