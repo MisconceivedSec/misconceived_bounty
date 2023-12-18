@@ -378,9 +378,9 @@ github_dorking_links() {
 
     if [[ ! $(which xclip) ]]; then
         cat ${recon_dir}/github_dorking_links.txt | xclip -selection clipboard
-        print_task "GitHub Dorking Links Copied" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking.txt")"
+        print_task "GitHub Dorking Links Copied" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking_links.txt")"
     else
-        print_task "GitHub Dorking Links Generated" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking.txt")"
+        print_task "GitHub Dorking Links Generated" "${red}-->${reset} ./$(realpath --relative-to="." "${recon_dir}/github_dorking_links.txt")"
     fi
 }
 
@@ -541,12 +541,12 @@ subdomain_recon() {
     
     ## GoAltDNS
 
-    print_task "Running 'goaltdns'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/goaltdns.txt")"
-    [[ -f $subdomain_dir/goaltdns.txt ]] && mv $subdomain_dir/goaltdns.txt $subdomain_dir/goaltdns.old
+    # print_task "Running 'goaltdns'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/goaltdns.txt")"
+    # [[ -f $subdomain_dir/goaltdns.txt ]] && mv $subdomain_dir/goaltdns.txt $subdomain_dir/goaltdns.old
     
-    goaltdns -l $subdomain_dir/combined_recursive.txt -w $brute_wordlist | probe | tee $subdomain_dir/goaltdns.txt
+    # goaltdns -l $subdomain_dir/combined_recursive.txt -w $brute_wordlist | probe | tee $subdomain_dir/goaltdns.txt
 
-    my_diff $subdomain_dir/goaltdns.old $subdomain_dir/goaltdns.txt "goaltdns"
+    # my_diff $subdomain_dir/goaltdns.old $subdomain_dir/goaltdns.txt "goaltdns"
 
     ## Final Combination
 
@@ -560,16 +560,16 @@ subdomain_recon() {
 
     if [[ $scope_regex ]]; then
         print_warning "Filtering out out-of-scope domains with regex:" "$scope_regex"
-        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_live.txt
+        cat $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_live.txt
         cat $subdomain_dir/final_live.txt | extract_url | grep -Ev "$scope_regex" > $subdomain_dir/final_live_stripped.txt
     else
-        cat $subdomain_dir/goaltdns.txt $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_live.txt
+        cat $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_live.txt
         cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/final_live_stripped.txt
     fi
 
     ## Combine unverified subdomains
 
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt $subdomain_dir/goaltdns.txt | extract_url > $subdomain_dir/final_subdomains.txt
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt | extract_url > $subdomain_dir/final_subdomains.txt
 
     ## New Subdomains
 
@@ -637,7 +637,7 @@ subdomain_recon() {
 
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
-    execution_time=$(date -u -d @${execution_seconds} +"%T")
+    execution_time=$(date -u -d @${execution_seconds} +"%Hh %Mm %Ss")
     print_green "Completed Subdomain Recon" "(Took ${yellow}$execution_time${reset}) ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/")"
     send_to_discord "**Completed** __Subdomain Recon__ in \`$execution_time\`\n- *Found \`$new_subdomain_count\` new subdomains (live: \`$live_subdomain_count\`)*" $logs_webhook
 }
@@ -678,7 +678,7 @@ subdomain_screenshot() {
 
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
-    execution_time=$(date -u -d @${execution_seconds} +"%T")
+    execution_time=$(date -u -d @${execution_seconds} +"%Hh %Mm %Ss")
     print_green "Completed Screenshots of Subdomains" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$recon_dir/screenshots")"
     send_to_discord "**Completed** taking __Screenshots of Subdomains__ in \`$execution_time\`" $logs_webhook
 }
@@ -752,7 +752,7 @@ fingerprint_recon() {
 
         end_seconds=$SECONDS
         execution_seconds=$((end_seconds - start_seconds))
-        execution_time=$(date -u -d @${execution_seconds} +"%T")
+        execution_time=$(date -u -d @${execution_seconds} +"%Hh %Mm %Ss")
         print_green "Completed Fingerprint/Service Scan of Subdomains" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$recon_dir/screenshots")" 
         send_to_discord "**Completed** __Fingerprint/Service scanning__ in \`$execution_time\`" $logs_webhook       
     else
@@ -825,7 +825,7 @@ deep_domain_recon() {
 
         end_seconds=$SECONDS
         execution_seconds=$((end_seconds - start_seconds))
-        execution_time=$(date -u -d @${execution_seconds} +"%T")
+        execution_time=$(date -u -d @${execution_seconds} +"%Hh %Mm %Ss")
         print_green "Completed Deep Recon of Domains" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir")"
         send_to_discord "**Completed** __Deep Recon of URLs__ in \`$execution_time\`" $logs_webhook
     else
@@ -927,7 +927,7 @@ leaks() {
 
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
-    execution_time=$(date -u -d @${execution_seconds} +"%T")
+    execution_time=$(date -u -d @${execution_seconds} +"%Hh %Mm %Ss")
     print_green "Completed Scan for Leaks" "(Took ${yellow}$execution_time${reset}${bold}) ${red}-->${reset} ./$(realpath --relative-to="." "$leaks_dir")"
     send_to_discord "**Completed** __Search for Leaks__ in \`$execution_time\`" $logs_webhook
 }
@@ -1486,7 +1486,7 @@ _test() {
     sleep 10
     end_seconds=$SECONDS
     execution_seconds=$((end_seconds - start_seconds))
-    execution_time=$(date -u -d @${execution_seconds} +"%T")
+    execution_time=$(date -u -d @${execution_seconds} +"%Hh %Mm %Ss")
     print_green "Test completed in ${yellow}$execution_time${reset}" "${red}-->${reset} ./tmp/example.txt"
 }
 
