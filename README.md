@@ -92,7 +92,7 @@ Parse -h or -help with each mode/function for more information
 - [`github-subdomains`](https://github.com/gwen001/github-search/blob/master/github-subdomains.py) (requires GitHub Access Token)
 - [`gitrob`](https://github.com/michenriksen/gitrob) (requires GitHub/GitLab Access Token)
 - [`goaltdns`](https://github.com/subfinder/goaltdns)
-- [`gobuster`](https://github.com/OJ/gobuster)
+- [`puredns`](https://github.com/d3mondev/puredns)
 - [`gowitness`](https://github.com/sensepost/gowitness)
 - [`httpx`](https://github.com/projectdiscovery/httpx)
 - [`nmap`](https://nmap.org/download)
@@ -426,7 +426,7 @@ The following tools are executed:
 1. `crt.sh`
 2. `subfinder`
 3. `github-subdomains.py`
-4. `gobuster` (brute-force)
+4. `puredns` (brute-force)
 5. `subdomainizer.py`
 6. `subfinder` (recursive)
 7. `goaltdns`

@@ -462,16 +462,25 @@ subdomain_recon() {
 
     ## Gobuster
 
-    print_task "Running 'gobuster' (brute-force)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/gobuster.txt")"
-    [[ -f $subdomain_dir/gobuster.txt ]] && mv $subdomain_dir/gobuster.txt $subdomain_dir/gobuster.old
+    # print_task "Running 'gobuster' (brute-force)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/gobuster.txt")"
+    # [[ -f $subdomain_dir/gobuster.txt ]] && mv $subdomain_dir/gobuster.txt $subdomain_dir/gobuster.old
 
-    gobuster dns -d $target -w $brute_wordlist --no-color -o $subdomain_dir/temp_gobuster.txt 
+    # gobuster dns -d $target -w $brute_wordlist --no-color -o $subdomain_dir/temp_gobuster.txt 
 
-    cut -d ' ' -f 2 $subdomain_dir/temp_gobuster.txt | grep -v '^[[:space:]]*$' > $subdomain_dir/gobuster.txt
-    rm $subdomain_dir/temp_gobuster.txt
+    # cut -d ' ' -f 2 $subdomain_dir/temp_gobuster.txt | grep -v '^[[:space:]]*$' > $subdomain_dir/gobuster.txt
+    # rm $subdomain_dir/temp_gobuster.txt
     
-    my_diff $subdomain_dir/gobuster.old $subdomain_dir/gobuster.txt "gobuster"
+    # my_diff $subdomain_dir/gobuster.old $subdomain_dir/gobuster.txt "gobuster"
 
+    ## PureDNS
+
+    print_task "Running 'puredns' (brute-force)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/puredns.txt")"
+    [[ -f $subdomain_dir/puredns.txt ]] && mv $subdomain_dir/puredns.txt $subdomain_dir/puredns.old
+
+    puredns bruteforce $brute_wordlist $target -w $subdomain_dir/puredns.txt
+
+    my_diff $subdomain_dir/puredns.old $subdomain_dir/puredns.txt "puredns"
+    
     ## Combining Files
 
     print_task "Combining: First Combination" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_first.txt")"
@@ -481,14 +490,14 @@ subdomain_recon() {
             cat $subdomain_dir/crt_sh.txt \
             $subdomain_dir/subfinder.txt \
             $subdomain_dir/github_subdomains.txt \
-            $subdomain_dir/gobuster.txt
+            $subdomain_dir/puredns.txt
         } | anew $(cat $subdomain_dir/provided_subdomains.txt | extract_url) -d | probe | sort -u | tee $subdomain_dir/combined_first.txt
     else
         {
             cat $subdomain_dir/crt_sh.txt \
             $subdomain_dir/subfinder.txt \
             $subdomain_dir/github_subdomains.txt \
-            $subdomain_dir/gobuster.txt
+            $subdomain_dir/puredns.txt
         } | probe | sort -u | tee $subdomain_dir/combined_first.txt
     fi
 
@@ -524,7 +533,7 @@ subdomain_recon() {
 
     ## Combining Files
 
-    print_task "Combining:" "Recursive report ${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
+    print_task "Combining: Recursive report" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
     {
         cat $subdomain_dir/combined_subdomainizer.txt 
         cat $subdomain_dir/subfinder_recursive.txt | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) -d | probe
@@ -560,7 +569,7 @@ subdomain_recon() {
 
     ## Combine unverified subdomains
 
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/gobuster.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt $subdomain_dir/goaltdns.txt | extract_url > $subdomain_dir/final_subdomains.txt
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt $subdomain_dir/goaltdns.txt | extract_url > $subdomain_dir/final_subdomains.txt
 
     ## New Subdomains
 
@@ -2100,7 +2109,7 @@ flags() {
 }
 
 depend() {
-    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "gobuster" "httpx" "gobuster" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei" "ping")
+    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "httpx" "puredns" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei" "ping")
     missing_depends=()
     
     for dependency in "${dependencies[@]}"; do
@@ -2168,10 +2177,23 @@ depend() {
                 sudo ln -s $HOME/.mcr_depend/github-search/github-subdomains.py /usr/bin/github-subdomains
             fi    
 
-            if [[ ! $(which gobuster) ]]; then
-                print_message "Installing:" "gobuster"
+            # if [[ ! $(which gobuster) ]]; then
+            #     print_message "Installing:" "gobuster"
 
-                go install github.com/OJ/gobuster/v3@latest
+            #     go install github.com/OJ/gobuster/v3@latest
+            # fi    
+
+            if [[ ! $(which puredns) ]]; then
+                print_message "Installing:" "puredns"
+                if [[ ! $(which massnds) ]]; then
+                    git clone https://github.com/blechschmidt/massdns.git ~/.mcr_depend/massnds
+                    cd ~/.mcr_depend/massnds
+                    make
+                    sudo make install
+                    cd -
+                fi
+                go install github.com/d3mondev/puredns/v2@latest
+                wget https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt -O ~/.config/puredns/resolvers.txt
             fi    
 
             if [[ ! $(which httpx) ]]; then
