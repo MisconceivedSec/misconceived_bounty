@@ -668,6 +668,7 @@ subdomain_screenshot() {
                 print_message "Uploading Screenshot:" "$(basename $screenshot)"
                 url="$(basename $screenshot | sed -e "s/.png//g" -e "s/http-/http:\/\//g" -e "s/https-/https:\/\//g")"
                 send_to_discord "Screenshot of \`$url\`:" "$screenshot_webhook" "$screenshot"
+                rm $screenshot
             done
         fi  
     else
