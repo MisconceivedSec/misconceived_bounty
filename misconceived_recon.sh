@@ -1018,6 +1018,34 @@ init() {
                              done)" | sed "s/}{/},{/g")"
     fi
 
+    ## Send messages to Discord Channels confirming their use
+
+        ## Change/Define Webhooks
+
+    if [[ $input_subdomain_webhook ]]; then
+        send_to_discord "_**INIT:** Will use this channel for subdomain output_" $input_subdomain_webhook
+    fi
+    
+    if [[ $input_screenshot_webhook ]]; then
+        send_to_discord "_**INIT:** Will use this channel for screenshot output_" $input_screenshot_webhook
+    fi
+    
+    if [[ $input_fingerprint_webhook ]]; then
+        send_to_discord "_**INIT:** Will use this channel for fingerprint output_" $input_fingerprint_webhook
+    fi
+    
+    if [[ $input_deep_domain_webhook ]]; then
+        send_to_discord "_**INIT:** Will use this channel for deep domain output_" $input_deep_domain_webhook
+    fi
+    
+    if [[ $input_leaks_webhook ]]; then
+        send_to_discord "_**INIT:** Will use this channel for leaks output_" $input_leaks_webhook
+    fi
+    
+    if [[ $input_logs_webhook ]]; then
+        send_to_discord "_**INIT:** Will use this channel for logs output_" $input_logs_webhook
+    fi
+
     ## Create Directories
 
     recon_dir="$path/${input_target}-recon"
@@ -1189,31 +1217,42 @@ config() {
     if [[ $input_subdomain_webhook ]]; then
         jq ".config.webhooks.subdomain = \"$input_subdomain_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+
+        send_to_discord "_**CONFIG:** Will use this channel for subdomain output_" $input_subdomain_webhook
     fi
     
     if [[ $input_screenshot_webhook ]]; then
         jq ".config.webhooks.screenshot = \"$input_screenshot_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+
+        send_to_discord "_**CONFIG:** Will use this channel for screenshot output_" $input_screenshot_webhook
     fi
     
     if [[ $input_fingerprint_webhook ]]; then
         jq ".config.webhooks.fingerprint = \"$input_fingerprint_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+        send_to_discord "_**CONFIG:** Will use this channel for fingerprint output_" $input_fingerprint_webhook
     fi
     
     if [[ $input_deep_domain_webhook ]]; then
         jq ".config.webhooks.deep_domain = \"$input_deep_domain_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+
+        send_to_discord "_**CONFIG:** Will use this channel for deep domain output_" $input_deep_domain_webhook
     fi
     
     if [[ $input_leaks_webhook ]]; then
         jq ".config.webhooks.leaks = \"$input_leaks_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+
+        send_to_discord "_**CONFIG:** Will use this channel for leaks output_" $input_leaks_webhook
     fi
     
     if [[ $input_logs_webhook ]]; then
         jq ".config.webhooks.logs = \"$input_logs_webhook\"" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+
+        send_to_discord "_**CONFIG:** Will use this channel for logs output_" $input_logs_webhook
     fi
 
     ## Change Target
