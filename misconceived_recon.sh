@@ -490,14 +490,14 @@ subdomain_recon() {
             cat $subdomain_dir/crt_sh.txt \
             $subdomain_dir/subfinder.txt \
             $subdomain_dir/github_subdomains.txt \
-            $subdomain_dir/puredns.txt
+            $subdomain_dir/puredns.txt 2> /dev/null
         } | anew $(cat $subdomain_dir/provided_subdomains.txt | extract_url) -d | probe | sort -u | tee $subdomain_dir/combined_first.txt
     else
         {
             cat $subdomain_dir/crt_sh.txt \
             $subdomain_dir/subfinder.txt \
             $subdomain_dir/github_subdomains.txt \
-            $subdomain_dir/puredns.txt
+            $subdomain_dir/puredns.txt 2> /dev/null
         } | probe | sort -u | tee $subdomain_dir/combined_first.txt
     fi
 
@@ -505,7 +505,7 @@ subdomain_recon() {
 
     print_task "Running 'subdomainizer'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subdomainizer.txt")"
     [[ -f $subdomain_dir/subdomainizer.txt ]] && mv $subdomain_dir/subdomainizer.txt $subdomain_dir/subdomainizer.old
-    [[ -f $subdomain_dir/subdomainizer_info.txt ]] && mv $leaks_dir/subdomainizer_info.txt $leaks_dir/subdomainizer_info.old
+    [[ -f $leaks_dir/subdomainizer_info.txt ]] && mv $leaks_dir/subdomainizer_info.txt $leaks_dir/subdomainizer_info.old
 
     subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
     grep "Found some secrets(might be false positive)..." -A 10000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
@@ -516,10 +516,10 @@ subdomain_recon() {
     ## Combining Files
 
     print_task "Combining: First Combination with Subdomainizer Report" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_subdomainizer.txt")"
-    
+
     {
         cat $subdomain_dir/combined_first.txt
-        cat $subdomain_dir/subdomainizer.txt | anew $(cat $subdomain_dir/combined_first.txt | extract_url) -d | probe
+        cat $subdomain_dir/subdomainizer.txt 2> /dev/null | anew $(cat $subdomain_dir/combined_first.txt | extract_url) -d | probe
     } | sort -u | tee $subdomain_dir/combined_subdomainizer.txt
 
     ## Subfinder recursive
@@ -536,7 +536,7 @@ subdomain_recon() {
     print_task "Combining: Recursive report" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
     {
         cat $subdomain_dir/combined_subdomainizer.txt 
-        cat $subdomain_dir/subfinder_recursive.txt | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) -d | probe
+        cat $subdomain_dir/subfinder_recursive.txt 2> /dev/null | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) -d | probe 
     } | sort -u > $subdomain_dir/combined_recursive.txt
     
     ## GoAltDNS
@@ -561,7 +561,7 @@ subdomain_recon() {
     if [[ $scope_regex ]]; then
         print_warning "Filtering out out-of-scope domains with regex:" "$scope_regex"
         cat $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_live.txt
-        cat $subdomain_dir/final_live.txt | extract_url | grep -Ev "$scope_regex" > $subdomain_dir/final_live_stripped.txt
+        cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/final_live_stripped.txt
     else
         cat $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_live.txt
         cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/final_live_stripped.txt
@@ -736,7 +736,7 @@ fingerprint_recon() {
 
         print_task "Running Nmap Scans" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/nmap_scans.txt")"
 
-        nmap -p 0-10000 -sV -iL $subdomain_dir/new_live_stripped.txt -oG nmap_scans_temp.txt
+        nmap -p 0-10000 -sV -iL $subdomain_dir/new_subdomains.txt -oG nmap_scans_temp.txt
 
         # sed -e "/#\ Nmap/d" -e "/Status:\ /d" nmap_scans_temp.txt > new_nmap_scans.txt
         grep "Ports: " nmap_scans_temp.txt > new_nmap_scans.txt
@@ -2065,6 +2065,29 @@ flags() {
                         ;;
                     -h|-help)
                         help gdork
+                        ;;
+                    *)
+                        print_error "Unknown option '$1'"
+                        ;;
+                esac
+                shift
+            done
+            ;;
+        fingerprint)
+            mode="fingerprint"
+            shift
+            while [[ "$1" != "" ]]; do
+                case $1 in
+                    -c|-config-file)
+                        shift
+                        if [[ -r "$1" ]]; then
+                            config_file="$1"
+                        else
+                            print_error "-c|-config-file requires a valid config file!"
+                        fi
+                        ;;
+                    -h|-help)
+                        help fingerprint
                         ;;
                     *)
                         print_error "Unknown option '$1'"
