@@ -592,12 +592,17 @@ subdomain_recon() {
     new_subdomain_count=$(wc -l "$subdomain_dir/new_subdomains.txt" | cut -d ' ' -f 1)
     live_subdomain_count=$(wc -l "$subdomain_dir/new_live.txt" | extract_url | cut -d ' ' -f 1)
 
-    send_to_discord "Discovered \`$new_subdomain_count\` **NEW** subdomains:" $subdomain_webhook "$subdomain_dir/new_subdomains.txt" 
-    send_to_discord "Live subdomains (\`$live_subdomain_count\`):" $subdomain_webhook "$subdomain_dir/new_live.txt" 
-    
-    print_message "Discoverd $new_subdomain_count NEW subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/new_subdomains.txt")"
-    print_message "Live subdomains ($live_subdomain_count):"
-    cat $subdomain_dir/new_live.txt
+    if [[ $new_subdomain_count -ge 1 ]]; then
+        send_to_discord "Discovered \`$new_subdomain_count\` **NEW** subdomains:" $subdomain_webhook "$subdomain_dir/new_subdomains.txt" 
+        send_to_discord "Live subdomains (\`$live_subdomain_count\`):" $subdomain_webhook "$subdomain_dir/new_live.txt" 
+
+        print_message "Discoverd $new_subdomain_count NEW subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/new_subdomains.txt")"
+        print_message "Live subdomains ($live_subdomain_count):"
+        cat $subdomain_dir/new_live.txt
+    else
+        send_to_discord "Did not discover any new subdomains" $subdomain_webhook
+        print_warning "Did not find any new subdomains"
+    fi
 
     ## DNSReaper Subdomain Takeovers
 
