@@ -1535,9 +1535,11 @@ _test() {
 func_wrapper() {
     command=$1
     scan_name=$2
-    tasks_start_seconds=$SECONDS
 
-    start_date=$(my_date)
+    if [[ $mode = "recon" ]]; then
+        tasks_start_seconds=$SECONDS
+        start_date=$(my_date)
+    fi
 
     if [[ $command = "depend" ]]; then
         logfile="./$scan_name ($start_date).log"
@@ -1560,11 +1562,14 @@ func_wrapper() {
     fi
     } |& tee "$logfile"
 
-    tasks_end_seconds=$SECONDS
-    tasks_execution_seconds=$((tasks_end_seconds - tasks_start_seconds))
-    tasks_execution_time=$(date -u -d @${tasks_execution_seconds} +"%T")
-    print_green "Completed all tasks in ${yellow}$tasks_execution_time${reset}"
-    send_to_discord "Completed all tasks in \`$tasks_execution_time\`" "$logs_webhook"
+    if [[ $mode = "recon" ]]; then
+        tasks_end_seconds=$SECONDS
+        tasks_execution_seconds=$((tasks_end_seconds - tasks_start_seconds))
+        tasks_execution_time=$(date -u -d @${tasks_execution_seconds} +"%T")
+        print_green "Completed all tasks in ${yellow}$tasks_execution_time${reset}"
+        send_to_discord "Completed all tasks in \`$tasks_execution_time\`" "$logs_webhook"
+    fi
+
     send_to_discord "Log file for **$scan_name** scan at: \`$start_date\`" "$logs_webhook" "$logfile"
 }
 
