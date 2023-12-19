@@ -702,6 +702,7 @@ fingerprint_recon() {
         ## WOHIS REPORT
 
         [[ -r $fingerprint_dir/whois_report.txt ]] || mv $fingerprint_dir/whois_report.txt $fingerprint_dir/whois_report.old 
+        print_message "$target"
         whois $target -H | tee $fingerprint_dir/whois_report.txt
 
         my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
