@@ -659,9 +659,10 @@ subdomain_screenshot() {
             mv $screenshot_dir/*.png $screenshot_dir/old/
         done
 
-        gowitness file -f $subdomain_dir/new_live.txt --delay 3 --timeout 30 -P $screenshot_dir -D $screenshot_dir/gowitness_db.sqlite3 --user-agent "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
+        gowitness file -f $subdomain_dir/new_live.txt --delay 3 --timeout 30 -P $screenshot_dir --user-agent "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
 
-        screenshots=($(ls $screenshot_dir/*.png))
+        rm gowitness.sqlite3
+        screenshots=($(ls $screenshot_dir/*.png 2> /dev/null))
 
         if [[ $screenshot_webhook ]]; then
             for screenshot in "${screenshots[@]}"; do
@@ -765,22 +766,23 @@ deep_domain_recon() {
 
     print_announce "Deep Domain Recon"
     start_seconds=$SECONDS
-    
+
     if [[ "${deep_domains[*]}" ]]; then
         start_seconds=$SECONDS
-        
+
         for i in "${!deep_domains[@]}"; do
 
-            domain="${deep_domains[$i]}"
+            full_domain="${deep_domains[$i]}"
+            domain=$(echo $full_domain | sed -e "s/http:\/\//" -e "s/https:\/\//")
             wordlist="${fuzz_wordlist[$i]}"
             [[ -d $deep_dir/$domain ]] || mkdir $deep_dir/$domain
-            
+
             ## Wayback urls
 
             print_task "Running 'waybackurls' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/waybackurls.txt")"
             [[ -f $deep_dir/$domain/waybackurls.txt ]] && mv $deep_dir/$domain/waybackurls.txt $deep_dir/$domain/waybackurls.old
         
-            waybackurls $domain | tee $deep_dir/$domain/waybackurls.txt
+            waybackurls $full_domain | tee $deep_dir/$domain/waybackurls.txt
 
             [[ -r $deep_dir/$domain/waybackurls.txt && $(cat $deep_dir/$domain/waybackurls.txt) ]] || print_warning "No findings from 'waybackurls'"
 
@@ -791,7 +793,7 @@ deep_domain_recon() {
             print_task "Running 'feroxbuster' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/feroxbuster.txt")"
             [[ -f $deep_dir/$domain/feroxbuster.txt ]] && mv $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/feroxbuster.old
         
-            feroxbuster -a "$uaa feroxbuster/latest" -u $domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
+            feroxbuster -a "$uaa feroxbuster/latest" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
             echo ""
 
             my_diff $deep_dir/$domain/feroxbuster.old $deep_dir/$domain/feroxbuster.txt "feroxbuster" $deep_domain_webhook
@@ -807,8 +809,8 @@ deep_domain_recon() {
             ## Scan js files for leaks
 
             print_task "Runing 'secretfinder' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/secretfinder.html")"
+           
             [[ -f $deep_dir/$domain/secretfinder.html ]] && mv $deep_dir/$domain/secretfinder.html $deep_dir/$domain/secretfinder.old 
-
             [[ -d $deep_dir/$domain/secretfinder ]] || mkdir $deep_dir/$domain/secretfinder 
 
             for url in "${findings[@]}"; do
@@ -1381,7 +1383,7 @@ recon() {
         elif [[ $attack = "screenshot" ]]; then
             subdomain_screenshot
         elif [[ $attack = "fingerprint" ]]; then
-            fingerprint
+            fingerprint_recon
         elif [[ $attack = "deep_domains" ]]; then
             deep_domain_recon
         elif [[ $attack = "leaks" ]]; then
@@ -2382,6 +2384,8 @@ case $mode in
     screenshot) func_wrapper subdomain_screenshot "Screenshots of Subdomains"
         ;;
     deep) func_wrapper deep_domain_recon "Deep Domain Recon"
+        ;;
+    fingerprint) func_wrapper fingerprint_recon "Fingerprint Recon"
         ;;
     leaks) func_wrapper leaks "Leaks"
         ;;
