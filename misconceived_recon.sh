@@ -711,7 +711,6 @@ fingerprint_recon() {
         print_task "Extracting IP Addresses from Discovered Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/httpx-ip.txt")"
 
         httpx -l $subdomain_dir/new_subdomains.txt -ip -o $fingerprint_dir/httpx-ip.txt
-        cat $fingerprint_dir/httpx-ip.txt | cut -d '[' -f 2| sed 's/]//' | sort -u > $fingerprint_dir/IPs.txt
 
         ## SHODAN
 
@@ -2152,7 +2151,7 @@ flags() {
 }
 
 depend() {
-    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "httpx" "puredns" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "secretfinder" "dnsreaper" "bat" "nuclei" "ping")
+    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "httpx" "puredns" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "jsleak" "dnsreaper" "bat" "nuclei" "ping")
     missing_depends=()
     
     for dependency in "${dependencies[@]}"; do
@@ -2198,6 +2197,11 @@ depend() {
             if [[ ! $(which ping) ]]; then
                 print_message "Installing:" "ping"
                 sudo apt install iputils-ping
+            fi    
+            
+            if [[ ! $(which jsleak) ]]; then
+                print_message "Installing:" "jsleak"
+                go install github.com/channyein1337/jsleak@latest
             fi    
 
             if [[ ! $(which crt.sh) ]]; then
@@ -2326,15 +2330,15 @@ depend() {
                 sudo apt install jq
             fi
 
-            if [[ ! $(which secretfinder) ]]; then
-                print_message "Installing:" "secretfinder"
+            # if [[ ! $(which secretfinder) ]]; then
+            #     print_message "Installing:" "secretfinder"
 
-                git clone https://github.com/m4ll0k/SecretFinder.git ~/.mcr_depend/secretfinder
-                cd ~/.mcr_depend/secretfinder
-                python3 -m pip install -r requirements.txt
-                sudo ln -s $HOME/.mcr_depend/secretfinder/SecretFinder.py /usr/bin/secretfinder
-                cd -
-            fi
+            #     git clone https://github.com/m4ll0k/SecretFinder.git ~/.mcr_depend/secretfinder
+            #     cd ~/.mcr_depend/secretfinder
+            #     python3 -m pip install -r requirements.txt
+            #     sudo ln -s $HOME/.mcr_depend/secretfinder/SecretFinder.py /usr/bin/secretfinder
+            #     cd -
+            # fi
 
             if [[ ! $(which dnsreaper) ]]; then
                 print_message "Installing:" "dnsreaper"
