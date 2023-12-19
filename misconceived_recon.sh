@@ -702,10 +702,13 @@ fingerprint_recon() {
         ## WOHIS REPORT
 
         [[ -r $fingerprint_dir/whois_report.txt ]] || mv $fingerprint_dir/whois_report.txt $fingerprint_dir/whois_report.old 
-        print_message "$target"
         whois $target -H | tee $fingerprint_dir/whois_report.txt
 
-        my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
+        if [[ $(cat $fingerprint_dir/whois_report.old ) ]]; then
+            my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
+        else
+            send_to_discord "\`whois\` report:" $fingerprint_webhook $fingerprint_dir/whois_report.txt
+        fi
 
         ## Extract IPs from URLs
 
@@ -731,7 +734,7 @@ fingerprint_recon() {
             send_to_discord "**Shodan** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_shodan_report.txt"
         fi
 
-        cat $fingerprint_dir/new_shodan/report.txt >> $fingerprint_dir/shodan_report.txt
+        cat $fingerprint_dir/new_shodan_report.txt >> $fingerprint_dir/shodan_report.txt
 
         ## NMAP
 
