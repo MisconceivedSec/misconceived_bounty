@@ -97,7 +97,7 @@ Parse -h or -help with each mode/function for more information
 - [`httpx`](https://github.com/projectdiscovery/httpx)
 - [`nmap`](https://nmap.org/download)
 - [`nuclei`](https://github.com/projectdiscovery/nuclei) & [`nuclei-templates`](https://github.com/projectdiscovery/nuclei-templates)
-- [`secretfinder`](https://github.com/m4ll0k/SecretFinder)
+- [`jsleak`](https://github.com/byt3hx/jsleak)
 - [`shodan`](https://cli.shodan.io/) (requires API key)
 - [`subdomainizer`](https://github.com/nsonaniya2010/SubDomainizer)
 - [`subfinder`](https://github.com/projectdiscovery/subfinder)
@@ -455,7 +455,7 @@ The `deep_domain_recon` function runs the following recon tasks:
 
 1. `waybackurls`
 2. `feroxbuster`
-3. `secretfinder`
+3. `jsleak`
 
 ### `leaks`
 
