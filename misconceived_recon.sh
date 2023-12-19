@@ -535,7 +535,7 @@ subdomain_recon() {
 
     print_task "Combining: Recursive report" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/combined_recursive.txt")"
     {
-        cat $subdomain_dir/combined_subdomainizer.txt 
+        cat $subdomain_dir/combined_subdomainizer.txt
         cat $subdomain_dir/subfinder_recursive.txt 2> /dev/null | anew $(cat $subdomain_dir/combined_subdomainizer.txt | extract_url) -d | probe 
     } | sort -u > $subdomain_dir/combined_recursive.txt
     
@@ -569,7 +569,7 @@ subdomain_recon() {
 
     ## Combine unverified subdomains
 
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt | extract_url > $subdomain_dir/final_subdomains.txt
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt 2> /dev/null | extract_url > $subdomain_dir/final_subdomains.txt
 
     ## New Subdomains
 
@@ -615,7 +615,7 @@ subdomain_recon() {
 
     if [[ -r "$subdomain_dir/dnsreaper-takeovers.old" ]]; then
         my_diff "$subdomain_dir/dnsreaper-takeovers.old" "$subdomain_dir/dnsreaper-takeovers.json" "DNSReaper (subdomain takeovers)" $subdomain_webhook
-    elif [[ $(cat "$subdomain_dir/dnsreaper-takeovers.json") ]]; then
+    elif [[ $(cat "$subdomain_dir/dnsreaper-takeovers.json" 2> /dev/null) ]]; then
         print_message "Report of:" "DNSReaper"
         jq . "$subdomain_dir/dnsreaper-takeovers.json"
         send_to_discord "DNSReaper report:\n\`\`\`json\n$(jq . "$subdomain_dir/dnsreaper-takeovers.json")\n\`\`\`" $subdomain_webhook "$subdomain_dir/dnsreaper-takeovers.json"
@@ -632,7 +632,7 @@ subdomain_recon() {
 
     if [[ -r "$subdomain_dir/nuclei_takeovers.old" ]]; then
         my_diff "$subdomain_dir/nuclei_takeovers.old" "$subdomain_dir/nuclei_takeovers.txt" "Nuclei (subdomain takeovers)" $subdomain_webhook
-    elif [[ $(cat "$subdomain_dir/nuclei_takeovers.txt") ]]; then
+    elif [[ $(cat "$subdomain_dir/nuclei_takeovers.txt" 2> /dev/null) ]]; then
         print_message "Report from:" "Nuclei (-tags takeovers)"
         cat "$subdomain_dir/nuclei_takeovers.txt"
         send_to_discord "Nuclei (-tags takeovers) report:\n\`\`\`\n$(cat "$subdomain_dir/nuclei_takeovers.txt")\n\`\`\`" $subdomain_webhook "$subdomain_dir/nuclei_takeovers.txt"
@@ -702,7 +702,7 @@ fingerprint_recon() {
         ## WOHIS REPORT
 
         [[ -r $fingerprint_dir/whois_report.txt ]] || mv $fingerprint_dir/whois_report.txt $fingerprint_dir/whois_report.old 
-        whois $url | tee $fingerprint_dir/whois_report.txt
+        whois -h $url | tee $fingerprint_dir/whois_report.txt
 
         my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
 
