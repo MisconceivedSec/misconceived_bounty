@@ -294,7 +294,7 @@ help() {
 
 probe() {
     # httprobe -p http:8080 -p http:8000 -p http:8008 -p http:8081 -p http:8888 -p http:8088 -p http:8880 -p http:8001 -p http:8082 -p http:8787 -p https:8443 -p https:8444 -p https:9443 -p https:4433 -p https:4343
-    httpx
+    httpx -silent
 }
 
 extract_url() {
@@ -583,8 +583,10 @@ subdomain_recon() {
 
     if [[ -f $subdomain_dir/final_live.old ]]; then
         cat $subdomain_dir/final_live.txt | anew $subdomain_dir/final_live.old -d > $subdomain_dir/new_live.txt
+        cat $subdomain_dir/final_live.txt | anew $subdomain_dir/final_live.old -d | extract_url > $subdomain_dir/new_live_stripped.txt
     else
         cat $subdomain_dir/final_live.txt > $subdomain_dir/new_live.txt
+        cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/new_live_stripped.txt
     fi
 
     ## Count and output new subdomains
@@ -699,26 +701,17 @@ fingerprint_recon() {
  
         ## WOHIS REPORT
 
-        domains=($(awk -F "." '{print $(NF-1)"."$NF}' $subdomain_dir/new_subdomains.txt | sort -u))
+        [[ -r $fingerprint_dir/whois_report.txt ]] || mv $fingerprint_dir/whois_report.txt $fingerprint_dir/whois_report.old 
+        whois $url | tee $fingerprint_dir/whois_report.txt
 
-        for url in "${domains[@]}"; do
-            echo "==============>> $url WHOIS report <<=============="
-            whois $url
-            echo "\n\n\n"    
-        done | tee $fingerprint_dir/new_whois_report.txt
-
-        if [[ $fingerprint_webhook ]]; then
-            print_message "Uploading:" "Whois Reports..."
-            send_to_discord "**\`whois\`** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_whois_report.txt"
-        fi
-
-        cat $fingerprint_dir/new_whois_report.txt >> $fingerprint_dir/whois_report.txt
+        my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
 
         ## Extract IPs from URLs
 
-        print_task "Extracting IP Addresses from Discovered Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/IPs.txt")"
+        print_task "Extracting IP Addresses from Discovered Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/httpx-ip.txt")"
 
-        httpx -l $subdomain_dir/new_subdomains.txt -ip -o $fingerprint_dir/IPs.txt
+        httpx -l $subdomain_dir/new_subdomains.txt -ip -o $fingerprint_dir/httpx-ip.txt
+        cat $fingerprint_dir/httpx-ip.txt | cut -d '[' -f 2| sed 's/]//' | sort -u > $fingerprint_dir/IPs.txt
 
         ## SHODAN
 
@@ -729,8 +722,9 @@ fingerprint_recon() {
 
             echo -e "==============>> $domain_ip report <<=============="
             shodan host "$ip"
-            echo -e "\n\n"
-        done < $fingerprint_dir/IPs.txt | tee $fingerprint_dir/new_shodan_report.txt
+            echo ""
+            echo ""
+        done < $fingerprint_dir/httpx-ip.txt | tee $fingerprint_dir/new_shodan_report.txt
 
         if [[ $fingerprint_webhook ]]; then
             print_message "Uploading:" "Shodan Reports..."
@@ -743,9 +737,10 @@ fingerprint_recon() {
 
         print_task "Running Nmap Scans" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/nmap_scans.txt")"
 
-        nmap -p 0-10000 -sV -iL $fingerprint_dir/IPs.txt -oG nmap_scans_temp.txt
+        nmap -p 0-10000 -sV -iL $subdomain_dir/new_live_stripped.txt -oG nmap_scans_temp.txt
 
-        sed -e "/#\ Nmap/d" -e "/Status:\ /d" nmap_scans_temp.txt > new_nmap_scans.txt
+        # sed -e "/#\ Nmap/d" -e "/Status:\ /d" nmap_scans_temp.txt > new_nmap_scans.txt
+        grep "Ports: " nmap_scans_temp.txt > new_nmap_scans.txt
         rm nmap_scans_temp.txt
 
         if [[ $fingerprint_webhook ]]; then
@@ -778,7 +773,7 @@ deep_domain_recon() {
         for i in "${!deep_domains[@]}"; do
 
             full_domain="${deep_domains[$i]}"
-            domain=$(echo $full_domain | sed -e "s/http:\/\//" -e "s/https:\/\//")
+            domain=$(echo $full_domain | sed -e "s/http:\/\///" -e "s/https:\/\///" -e "s/\///g")
             wordlist="${fuzz_wordlist[$i]}"
             [[ -d $deep_dir/$domain ]] || mkdir $deep_dir/$domain
 
@@ -798,7 +793,7 @@ deep_domain_recon() {
             print_task "Running 'feroxbuster' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/feroxbuster.txt")"
             [[ -f $deep_dir/$domain/feroxbuster.txt ]] && mv $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/feroxbuster.old
         
-            feroxbuster -a "$uaa feroxbuster/latest" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
+            feroxbuster -a "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36t" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
             echo ""
 
             my_diff $deep_dir/$domain/feroxbuster.old $deep_dir/$domain/feroxbuster.txt "feroxbuster" $deep_domain_webhook
@@ -807,25 +802,26 @@ deep_domain_recon() {
 
             print_message "Combining Findings"
 
-            sort -u $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/waybackurls.txt | extract_url > $deep_dir/$domain/combined_deep.txt
+            echo -e "$(cat $deep_dir/$domain/feroxbuster.txt | tr -s ' ' | cut -d ' ' -f6)\n$(cat $deep_dir/$domain/waybackurls.txt)"   > $deep_dir/$domain/combined_deep.txt
             cat $deep_dir/$domain/combined_deep.txt | probe | tee $deep_dir/$domain/combined_deep_live.txt
             findings=($(cat $deep_dir/$domain/combined_deep_live.txt))
 
             ## Scan js files for leaks
 
-            print_task "Runing 'secretfinder' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/secretfinder.html")"
+            print_task "Runing 'jsleak' on deep domain recon results" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/jsleak.txt")"
            
-            [[ -f $deep_dir/$domain/secretfinder.html ]] && mv $deep_dir/$domain/secretfinder.html $deep_dir/$domain/secretfinder.old 
-            [[ -d $deep_dir/$domain/secretfinder ]] || mkdir $deep_dir/$domain/secretfinder 
+            [[ -r $deep_dir/$domain/jsleak.txt ]] || mv $deep_dir/$domain/jsleak.txt $deep_dir/$domain/jsleak.old
 
-            for url in "${findings[@]}"; do
+            cat $deep_dir/$domain/combined_deep_live.txt | jsleak -s | tee jsleak.txt
 
-                filename=$(echo $url | sed -e "s/https:\/\///g" -e "s/http:\/\///g")
-                secretfinder -i $url -e -o $deep_dir/$domain/secretfinder/${filename}.html
-            
-            done
+            if [[ $(cat $deep_dir/$domain/jsleak.old) ]]; then
+                my_diff $deep_dir/$domain/jsleak.old $deep_dir/$domain/jsleak.txt "JSLeak" $deep_domain_webhook
+            elif [[ $(cat $deep_dir/$domain/jsleak.old) ]]; then
+                send_to_discord "\`jsleak\` report:" $deep_domain_webhook $deep_dir/$domain/jsleak.txt
+            else 
+                print_warning "No findings from 'jsleak'"
+            fi
 
-            my_diff $deep_dir/$domain/secretfinder.old $deep_dir/$domain/secretfinder.html "SecretFinder.py" $deep_domain_webhook
 
         done
 
