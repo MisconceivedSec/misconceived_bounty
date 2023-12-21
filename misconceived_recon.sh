@@ -707,51 +707,72 @@ fingerprint_recon() {
         if [[ $(cat $fingerprint_dir/whois_report.old ) ]]; then
             my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
         else
-            send_to_discord "\`whois\` report:" $fingerprint_webhook $fingerprint_dir/whois_report.txt
+            send_to_discord "\`whois\` report ($start_date):" $fingerprint_webhook $fingerprint_dir/whois_report.txt
         fi
 
         ## Extract IPs from URLs
 
         print_task "Extracting IP Addresses from Discovered Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/httpx-ip.txt")"
-
         httpx -l $subdomain_dir/new_subdomains.txt -ip -o $fingerprint_dir/httpx-ip.txt
+        cut -d '[' -f2 $fingerprint_dir/httpx-ip.txt | sed 's/]//g' | sort -u > $fingerprint_dir/ips.txt
+
+        if [[ $(cat $fingerprint_dir/httpx-ip.txt) ]]; then
+            send_to_discord "IPs of subdomains [\`httpx -ip\`] ($start_date):" $fingerprint_webhook $fingerprint_dir/httpx-ip.txt
+        fi
 
         ## SHODAN
 
         print_task "Generating Shodan Report" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/shodan_report.txt")"
 
-        while read -r domain_ip; do
-            ip=$(echo $domain_ip | cut -d '[' -f2 | sed 's/]//')
-
-            echo -e "==============>> $domain_ip report <<=============="
+        while read -r ip; do
+            echo -e "==============>> $ip report <<=============="
+            echo ---> Domains:
+            grep $ip $fingerprint_dir/httpx-ip.txt | cut -d ' ' -f1
+            echo ---> Shodan Report:
             shodan host "$ip"
             echo ""
             echo ""
-        done < $fingerprint_dir/httpx-ip.txt | tee $fingerprint_dir/new_shodan_report.txt
-
-        if [[ $fingerprint_webhook ]]; then
-            print_message "Uploading:" "Shodan Reports..."
-            send_to_discord "**Shodan** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_shodan_report.txt"
-        fi
+        done < $fingerprint_dir/ips.txt | tee $fingerprint_dir/new_shodan_report.txt
+        
+        send_to_discord "**Shodan** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_shodan_report.txt"
 
         cat $fingerprint_dir/new_shodan_report.txt >> $fingerprint_dir/shodan_report.txt
 
-        ## NMAP
+        # ## NMAP
 
-        print_task "Running Nmap Scans" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/nmap_scans.txt")"
+        # print_task "Running Nmap Scans" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/nmap_scans.txt")"
 
-        nmap -p 0-10000 -sV -iL $subdomain_dir/new_subdomains.txt -oG nmap_scans_temp.txt
+        # nmap -p 0-10000 -sV -iL $subdomain_dir/new_subdomains.txt -oG $fingerprint_dir/nmap_scans_temp.txt
 
         # sed -e "/#\ Nmap/d" -e "/Status:\ /d" nmap_scans_temp.txt > new_nmap_scans.txt
-        grep "Ports: " nmap_scans_temp.txt > new_nmap_scans.txt
-        rm nmap_scans_temp.txt
+        # grep "Ports: " $fingerprint_dir/nmap_scans_temp.txt > $fingerprint_dir/new_nmap_scans.txt
+        # rm $fingerprint_dir/nmap_scans_temp.txt
 
-        if [[ $fingerprint_webhook ]]; then
-            print_message "Uploading:" "Nmap Scans..."
-            send_to_discord "**\`nmap\`** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_nmap_scan.txt"
-        fi
+        # if [[ $fingerprint_webhook ]]; then
+        #     print_message "Uploading:" "Nmap Scans..."
+        #     send_to_discord "**\`nmap\`** report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_nmap_scans.txt"
+        # fi
 
-        cat new_nmap_scans.txt >> nmap_scans.txt
+        # cat $fingerprint_dir/new_nmap_scans.txt >> $fingerprint_dir/nmap_scans.txt
+
+        ## MASSCAN
+
+        print_task "Running Masscan Scans" "${red}-->${reset} ./$(realpath --relative-to="." "$fingerprint_dir/masscan_scans.txt")"
+
+        sudo masscan -p1-10000 -iL $fingerprint_dir/ips.txt -oG $fingerprint_dir/masscan_temp.txt
+
+        while read -r line_report; do
+            echo "---> Domains:"
+            grep $ip $fingerprint_dir/httpx-ip.txt | cut -d ' ' -f1
+            echo "---> Masscan report:"
+            echo $line_report
+            echo ""
+            echo ""
+        done | tee $fingerprint_dir/new_masscan_scans.txt
+
+        send_to_discord "\`masscan\` report ($start_date)" $fingerprint_webhook "$fingerprint_dir/new_masscan_scans.txt"
+
+        cat $fingerprint_dir/new_masscan_scans.txt >> $fingerprint_dir/masscan_scans.txt
 
         ## Time Taken
 
@@ -787,9 +808,14 @@ deep_domain_recon() {
         
             waybackurls $full_domain | tee $deep_dir/$domain/waybackurls.txt
 
-            [[ -r $deep_dir/$domain/waybackurls.txt && $(cat $deep_dir/$domain/waybackurls.txt) ]] || print_warning "No findings from 'waybackurls'"
-
-            my_diff $deep_dir/$domain/waybackurls.old $deep_dir/$domain/waybackurls.txt "waybackurls" $deep_domain_webhook
+            if [[ $(cat $deep_dir/$domain/waybackurls.txt) ]]; then
+                send_to_discord "\`waybackurls\` results:" $deep_domain_webhook $deep_dir/$domain/waybackurls.txt
+            elif [[ $(cat $deep_dir/$domain/waybackurls.old) ]]; then
+                my_diff $deep_dir/$domain/waybackurls.old $deep_dir/$domain/waybackurls.txt "waybackurls" $deep_domain_webhook
+            else
+                print_warning "No findings from 'waybackurls'"
+                send_to_discord "*No findings from \`waybackurls\`*" $deep_domain_webhook
+            fi
 
             ## Feroxbuster dir brute-forcing
 
@@ -799,20 +825,27 @@ deep_domain_recon() {
             feroxbuster -a "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36t" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
             echo ""
 
-            my_diff $deep_dir/$domain/feroxbuster.old $deep_dir/$domain/feroxbuster.txt "feroxbuster" $deep_domain_webhook
+            if [[ $(cat $deep_dir/$domain/feroxbuster.txt) ]]; then
+                send_to_discord "\`feroxbuster\` results:" $deep_domain_webhook $deep_dir/$domain/feroxbuster.txt
+            elif [[ $(cat $deep_dir/$domain/feroxbuster.old) ]]; then
+                my_diff $deep_dir/$domain/feroxbuster.old $deep_dir/$domain/feroxbuster.txt "feroxbuster" $deep_domain_webhook
+            else
+                print_warning "No results from 'feroxbuster'"
+                send_to_discord "*No results from \`feroxbuster\`*" $deep_domain_webhook
+            fi
 
             ## Combine files
 
             print_message "Combining Findings"
 
-            echo -e "$(cat $deep_dir/$domain/feroxbuster.txt | tr -s ' ' | cut -d ' ' -f6)\n$(cat $deep_dir/$domain/waybackurls.txt)"   > $deep_dir/$domain/combined_deep.txt
+            echo -e "$(cat $deep_dir/$domain/feroxbuster.txt | tr -s ' ' | cut -d ' ' -f6)\n$(cat $deep_dir/$domain/waybackurls.txt)" > $deep_dir/$domain/combined_deep.txt
             cat $deep_dir/$domain/combined_deep.txt | probe | tee $deep_dir/$domain/combined_deep_live.txt
             findings=($(cat $deep_dir/$domain/combined_deep_live.txt))
 
-            ## Scan js files for leaks
+            ## Scan js files for leaks (jsleak)
 
             print_task "Runing 'jsleak' on deep domain recon results" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/jsleak.txt")"
-           
+
             [[ -r $deep_dir/$domain/jsleak.txt ]] || mv $deep_dir/$domain/jsleak.txt $deep_dir/$domain/jsleak.old
 
             cat $deep_dir/$domain/combined_deep_live.txt | jsleak -s | tee jsleak.txt
@@ -824,8 +857,6 @@ deep_domain_recon() {
             else 
                 print_warning "No findings from 'jsleak'"
             fi
-
-
         done
 
         ## Time Taken
@@ -1540,10 +1571,9 @@ func_wrapper() {
     command=$1
     scan_name=$2
 
-    if [[ $mode = "recon" ]]; then
-        tasks_start_seconds=$SECONDS
-        start_date=$(my_date)
-    fi
+
+    tasks_start_seconds=$SECONDS
+    start_date=$(my_date)
 
     if [[ $command = "depend" ]]; then
         logfile="./$scan_name ($start_date).log"
