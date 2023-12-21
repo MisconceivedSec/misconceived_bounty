@@ -621,6 +621,7 @@ subdomain_recon() {
         send_to_discord "DNSReaper report:\n\`\`\`json\n$(jq . "$subdomain_dir/dnsreaper-takeovers.json")\n\`\`\`" $subdomain_webhook "$subdomain_dir/dnsreaper-takeovers.json"
     else
         print_warning "No findings from DNSReaper"
+        send_to_discord "*No findings from DNSReaper subdomain takeover detection*"
     fi
     
     ## Nuclei Subdomain Takeover
@@ -638,6 +639,7 @@ subdomain_recon() {
         send_to_discord "Nuclei (-tags takeovers) report:\n\`\`\`\n$(cat "$subdomain_dir/nuclei_takeovers.txt")\n\`\`\`" $subdomain_webhook "$subdomain_dir/nuclei_takeovers.txt"
     else
         print_warning "No findings from Nuclei"
+        send_to_discord "*No findings from Nuclei subdomain takeover detector*"  $subdomain_webhook
     fi
 
     ## Time Taken
