@@ -108,20 +108,23 @@ send_to_discord() {
 }
 
 my_diff() {
-    old=$1
+    original=$1
     new=$2
     report=$3
     webhook=$4
 
-    difference="$([[ -r $old ]] && colordiff $old $new | sed -e "s/</-/g" -e "s/>/+/g" | grep -Ev '\---')"
+    difference=$(cat $new | anew $original)
+    rm $new
 
+    echo -e $difference
+    
     if [[ $difference ]]; then
         print_warning "Found changes in report: ${report}"
         echo -e "$difference"
-
+        
         if [[ $webhook ]]; then
             print_message "Uploading difference in:" "${report} report"
-            send_to_discord "Changes in **\`${report}\`**:\n\`\`\`diff\n${difference}\n\`\`\`" $webhook
+            send_to_discord "Updates in **\`${report}\`**:\n\`\`\`\n${difference}\n\`\`\`" $webhook
         fi
     fi
 }
@@ -393,11 +396,10 @@ subdomain_recon() {
 
     if [[ $provided_subdomains ]]; then
         print_task "Verifying provided subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/provided_subdomains.txt")"
-        [[ -f $subdomain_dir/provided_subdomains.txt ]] && mv $subdomain_dir/provided_subdomains.txt $subdomain_dir/provided_subdomains.old
         
-        httpx -l $provided_subdomains -o $subdomain_dir/provided_subdomains.txt
+        httpx -l $provided_subdomains -o $subdomain_dir/new_provided_subdomains.txt
 
-        my_diff $subdomain_dir/provided_subdomains.old $subdomain_dir/provided_subdomains.txt "Provided Subdomains"
+        my_diff $subdomain_dir/provided_subdomains.txt $subdomain_dir/new_provided_subdomains.txt "Provided Subdomains"
     else
         print_warning "No subdomains provided by BB program"
     fi
@@ -405,33 +407,29 @@ subdomain_recon() {
     ## crt.sh
  
     print_task "Pulling down 'crt.sh' domains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/crt_sh.txt")"
-    [[ -f $subdomain_dir/crt_sh.txt ]] && mv $subdomain_dir/crt_sh.txt $subdomain_dir/crt_sh.old
-    [[ -f $subdomain_dir/crt_sh_wildcard.txt ]] && mv $subdomain_dir/crt_sh_wildcard.txt $subdomain_dir/crt_sh_wildcard.old
-
+   
     crt.sh -t "$target" > $subdomain_dir/crt_temp.txt
-    cat $subdomain_dir/crt_temp.txt | grep -v '*' | tee $subdomain_dir/crt_sh.txt
+    cat $subdomain_dir/crt_temp.txt | grep -v '*' | tee $subdomain_dir/new_crt_sh.txt
 
     print_message "crt.sh wildcard domains"
-    grep '*' $subdomain_dir/crt_temp.txt | tee $subdomain_dir/crt_sh_wildcard.txt
+    grep '*' $subdomain_dir/crt_temp.txt | tee $subdomain_dir/new_crt_sh_wildcard.txt
 
     rm $subdomain_dir/crt_temp.txt
 
-    my_diff $subdomain_dir/crt_sh.old $subdomain_dir/crt_sh.txt "crt.sh"
-    my_diff $subdomain_dir/crt_sh_wildcard.old $subdomain_dir/crt_sh_wildcard.txt "crt.sh wildcard domains"
+    my_diff $subdomain_dir/crt_sh.txt $subdomain_dir/new_crt_sh.txt "crt.sh"
+    my_diff $subdomain_dir/crt_sh_wildcard.txt $subdomain_dir/new_crt_sh_wildcard.txt "crt.sh wildcard domains"
 
     ## Subfinder
 
     print_task "Running 'subfinder'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subfinder.txt")"
-    [[ -f $subdomain_dir/subfinder.txt ]] && mv $subdomain_dir/subfinder.txt $subdomain_dir/subfinder.old
+  
+    subfinder -d "$target" -o $subdomain_dir/new_subfinder.txt
 
-    subfinder -d "$target" -o $subdomain_dir/subfinder.txt
-
-    my_diff $subdomain_dir/subfinder.old $subdomain_dir/subfinder.txt "subfinder"
+    my_diff $subdomain_dir/subfinder.txt $subdomain_dir/new_subfinder.txt "subfinder"
 
     ## GitHub Subdomains
 
     print_task "Running 'github-subdomains.py'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/github_subdomains.txt")"
-    [[ -f $subdomain_dir/github_subdomains.txt ]] && mv $subdomain_dir/github_subdomains.txt $subdomain_dir/github_subdomains.old
 
     github-subdomains -t $ghtoken -d $target | tee $subdomain_dir/github_subdomain_unsorted.txt
     sleep 6
@@ -441,10 +439,10 @@ subdomain_recon() {
     sleep 10
     github-subdomains -t $ghtoken -d $target | tee -a $subdomain_dir/github_subdomain_unsorted.txt
 
-    sort -u $subdomain_dir/github_subdomain_unsorted.txt | grep -v "error occurred:" > $subdomain_dir/github_subdomains.txt
+    sort -u $subdomain_dir/github_subdomain_unsorted.txt | grep -v "error occurred:" > $subdomain_dir/new_github_subdomains.txt
     rm $subdomain_dir/github_subdomain_unsorted.txt
 
-    my_diff $subdomain_dir/github-subdomains.old $subdomain_dir/github-subdomains.txt "github-subdomains"
+    my_diff $subdomain_dir/github-subdomains.txt $subdomain_dir/new_github-subdomains.txt "github-subdomains"
 
     ## Amass (doesn't work with my internet :/)
 
@@ -475,11 +473,10 @@ subdomain_recon() {
     ## PureDNS
 
     print_task "Running 'puredns' (brute-force)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/puredns.txt")"
-    [[ -f $subdomain_dir/puredns.txt ]] && mv $subdomain_dir/puredns.txt $subdomain_dir/puredns.old
 
-    puredns bruteforce $brute_wordlist $target -w $subdomain_dir/puredns.txt
+    puredns bruteforce $brute_wordlist $target -w $subdomain_dir/new_puredns.txt
 
-    my_diff $subdomain_dir/puredns.old $subdomain_dir/puredns.txt "puredns"
+    my_diff $subdomain_dir/puredns.txt $subdomain_dir/new_puredns.txt "puredns"
     
     ## Combining Files
 
@@ -507,11 +504,15 @@ subdomain_recon() {
     [[ -f $subdomain_dir/subdomainizer.txt ]] && mv $subdomain_dir/subdomainizer.txt $subdomain_dir/subdomainizer.old
     [[ -f $leaks_dir/subdomainizer_info.txt ]] && mv $leaks_dir/subdomainizer_info.txt $leaks_dir/subdomainizer_info.old
 
-    subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/subdomainizer.txt
-    grep "Found some secrets(might be false positive)..." -A 10000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/subdomainizer_info.txt
+    subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/new_subdomainizer.txt
+    grep "Found some secrets(might be false positive)..." -A 10000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/new_sssubdomainizer_info.txt
 
-    my_diff $subdomain_dir/subdomainizer.old $subdomain_dir/subdomainizer.txt "subdomainizer"
-    my_diff $leaks_dir/subdomainizer_info.old $leaks_dir/subdomainizer_info.txt "subdomainizer leaks"
+    my_diff $subdomain_dir/subdomainizer.txt $subdomain_dir/new_subdomainizer.txt "subdomainizer"
+    my_diff $leaks_dir/subdomainizer_info.txt $leaks_dir/new_subdomainizer_info.txt "subdomainizer leaks"
+
+    if [[ $(cat $leaks_dir/subdomainizer_info.txt 2> /dev/null) ]]; then
+        send_to_discord "Subdomainizer Leaked Findings" $leaks_webhook $leaks_dir/subdomainizer_info.txt
+    fi
 
     ## Combining Files
 
@@ -525,11 +526,10 @@ subdomain_recon() {
     ## Subfinder recursive
 
     print_task "Running 'subfinder recursive'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subfinder_recursive.txt")"
-    [[ -f $subdomain_dir/subfinder_recursive.txt ]] && mv $subdomain_dir/subfinder_recursive.txt $subdomain_dir/subfinder_recursive.old
 
-    subfinder -recursive -list $subdomain_dir/combined_subdomainizer.txt -o $subdomain_dir/subfinder_recursive.txt
+    subfinder -recursive -list $subdomain_dir/combined_subdomainizer.txt -o $subdomain_dir/new_subfinder_recursive.txt
 
-    my_diff $subdomain_dir/subfinder_recursive.old $subdomain_dir/subfinder_recursive.txt "subfinder recursive"
+    my_diff $subdomain_dir/subfinder_recursive.txt $subdomain_dir/new_subfinder_recursive.txt "subfinder recursive"
 
     ## Combining Files
 
@@ -550,44 +550,35 @@ subdomain_recon() {
 
     ## Final Combination
 
+    print_task "Combining unverified & live subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/")"
+
     [[ -r $subdomain_dir/final_subdomains.txt ]] && mv $subdomain_dir/final_subdomains.txt $subdomain_dir/final_subdomains.old
     [[ -r $subdomain_dir/final_live.txt ]] && mv $subdomain_dir/final_live.txt $subdomain_dir/final_live.old
     [[ -r $subdomain_dir/final_live_stripped.txt ]] && mv $subdomain_dir/final_live_stripped.txt $subdomain_dir/final_live_stripped.old
 
-    print_task "Combining unverified & live subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/")"
-    
     ## Filter with scope regex if available + combine live subdomains
 
     if [[ $scope_regex ]]; then
         print_warning "Filtering out out-of-scope domains with regex:" "$scope_regex"
-        cat $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/final_live.txt
-        cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/final_live_stripped.txt
+        cat $subdomain_dir/combined_recursive.txt | sort -u | grep -Ev "$scope_regex" > $subdomain_dir/new_final_live.txt
+        cat $subdomain_dir/new_final_live.txt | extract_url > $subdomain_dir/new_final_live_stripped.txt
     else
-        cat $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/final_live.txt
-        cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/final_live_stripped.txt
+        cat $subdomain_dir/combined_recursive.txt | sort -u > $subdomain_dir/new_final_live.txt
+        cat $subdomain_dir/new_final_live.txt | extract_url > $subdomain_dir/new_final_live_stripped.txt
     fi
 
     ## Combine unverified subdomains
 
-    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt 2> /dev/null | extract_url > $subdomain_dir/final_subdomains.txt
+    cat $subdomain_dir/crt_sh.txt $subdomain_dir/subfinder.txt $subdomain_dir/github_subdomains.txt $subdomain_dir/puredns.txt $subdomain_dir/subdomainizer.txt $subdomain_dir/subfinder_recursive.txt 2> /dev/null | extract_url > $subdomain_dir/new_final_subdomains.txt
 
     ## New Subdomains
 
-    if [[ -f $subdomain_dir/final_subdomains.old ]]; then
-        cat $subdomain_dir/final_subdomains.txt | anew $subdomain_dir/final_subdomains.old -d > $subdomain_dir/new_subdomains.txt
-    else
-        cat $subdomain_dir/final_subdomains.txt > $subdomain_dir/new_subdomains.txt
-    fi
+    cat $subdomain_dir/new_final_subdomains.txt | anew $subdomain_dir/final_subdomains.txt > $subdomain_dir/new_subdomains.txt
 
     ## New Live Subdomains
 
-    if [[ -f $subdomain_dir/final_live.old ]]; then
-        cat $subdomain_dir/final_live.txt | anew $subdomain_dir/final_live.old -d > $subdomain_dir/new_live.txt
-        cat $subdomain_dir/final_live.txt | anew $subdomain_dir/final_live.old -d | extract_url > $subdomain_dir/new_live_stripped.txt
-    else
-        cat $subdomain_dir/final_live.txt > $subdomain_dir/new_live.txt
-        cat $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/new_live_stripped.txt
-    fi
+    cat $subdomain_dir/new_final_live.txt | anew $subdomain_dir/final_live.txt > $subdomain_dir/new_live.txt
+    cat $subdomain_dir/new_final_live.txt | anew $subdomain_dir/final_live.txt | extract_url > $subdomain_dir/new_live_stripped.txt
 
     ## Count and output new subdomains
 
@@ -609,16 +600,16 @@ subdomain_recon() {
     ## DNSReaper Subdomain Takeovers
 
     print_task "Running 'dnsreaper' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/dnsreaper-takeovers.json")"
-    [[ -r "$subdomain_dir/dnsreaper-takeovers.json" ]] && mv "$subdomain_dir/dnsreaper-takeovers.json" "$subdomain_dir/dnsreaper-takeovers.old"
 
-    dnsreaper file --filename "$subdomain_dir/final_live.txt" --out-format json --out "$subdomain_dir/dnsreaper-takeovers.txt"
+    dnsreaper file --filename "$subdomain_dir/final_live.txt" --out-format json --out "$subdomain_dir/new_dnsreaper-takeovers.txt"
 
-    if [[ -r "$subdomain_dir/dnsreaper-takeovers.old" ]]; then
-        my_diff "$subdomain_dir/dnsreaper-takeovers.old" "$subdomain_dir/dnsreaper-takeovers.json" "DNSReaper (subdomain takeovers)" $subdomain_webhook
-    elif [[ $(cat "$subdomain_dir/dnsreaper-takeovers.json" 2> /dev/null) ]]; then
+    if [[ $(cat "$subdomain_dir/dnsreaper-takeovers.json" 2> /dev/null) ]]; then
         print_message "Report of:" "DNSReaper"
         jq . "$subdomain_dir/dnsreaper-takeovers.json"
+
         send_to_discord "DNSReaper report:\n\`\`\`json\n$(jq . "$subdomain_dir/dnsreaper-takeovers.json")\n\`\`\`" $subdomain_webhook "$subdomain_dir/dnsreaper-takeovers.json"
+
+        my_diff "$subdomain_dir/dnsreaper-takeovers.json" "$subdomain_dir/new_dnsreaper-takeovers.json" "DNSReaper (subdomain takeovers)" $subdomain_webhook
     else
         print_warning "No findings from DNSReaper"
         send_to_discord "*No findings from DNSReaper subdomain takeover detection*"
@@ -629,14 +620,15 @@ subdomain_recon() {
     print_task "Running 'nuclei -tags takeover' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/nuclei_takeovers.txt")"
     [[ -r "$subdomain_dir/nuclei_takeovers.txt" ]] && mv "$subdomain_dir/nuclei_takeovers.txt" "$subdomain_dir/nuclei_takeovers.old"
 
-    nuclei -tags takeover -l "$subdomain_dir/final_live.txt" -o "$subdomain_dir/nuclei_takeovers.txt"
+    nuclei -tags takeover -l "$subdomain_dir/final_live.txt" -o "$subdomain_dir/new_nuclei_takeovers.txt"
 
-    if [[ -r "$subdomain_dir/nuclei_takeovers.old" ]]; then
-        my_diff "$subdomain_dir/nuclei_takeovers.old" "$subdomain_dir/nuclei_takeovers.txt" "Nuclei (subdomain takeovers)" $subdomain_webhook
-    elif [[ $(cat "$subdomain_dir/nuclei_takeovers.txt" 2> /dev/null) ]]; then
+    if [[ $(cat "$subdomain_dir/nuclei_takeovers.txt" 2> /dev/null) ]]; then
         print_message "Report from:" "Nuclei (-tags takeovers)"
         cat "$subdomain_dir/nuclei_takeovers.txt"
+        
         send_to_discord "Nuclei (-tags takeovers) report:\n\`\`\`\n$(cat "$subdomain_dir/nuclei_takeovers.txt")\n\`\`\`" $subdomain_webhook "$subdomain_dir/nuclei_takeovers.txt"
+
+        my_diff "$subdomain_dir/nuclei_takeovers.txt" "$subdomain_dir/new_nuclei_takeovers.txt" "Nuclei (subdomain takeovers)" $subdomain_webhook
     else
         print_warning "No findings from Nuclei"
         send_to_discord "*No findings from Nuclei subdomain takeover detector*"  $subdomain_webhook
@@ -703,14 +695,11 @@ fingerprint_recon() {
  
         ## WOHIS REPORT
 
-        [[ -r $fingerprint_dir/whois_report.txt ]] || mv $fingerprint_dir/whois_report.txt $fingerprint_dir/whois_report.old 
-        whois $target -H | tee $fingerprint_dir/whois_report.txt
+        whois $target -H | tee $fingerprint_dir/new_whois_report.txt
 
-        if [[ $(cat $fingerprint_dir/whois_report.old ) ]]; then
-            my_diff $fingerprint_dir/whois_report.old $fingerprint_dir/whois_report.txt "WHOIS" $fingerprint_webhook
-        else
-            send_to_discord "\`whois\` report ($start_date):" $fingerprint_webhook $fingerprint_dir/whois_report.txt
-        fi
+        send_to_discord "\`whois\` report ($start_date):" $fingerprint_webhook $fingerprint_dir/whois_report.txt
+
+        my_diff $fingerprint_dir/whois_report.txt $fingerprint_dir/new_whois_report.txt "WHOIS" $fingerprint_webhook
 
         ## Extract IPs from URLs
 
@@ -806,14 +795,12 @@ deep_domain_recon() {
             ## Wayback urls
 
             print_task "Running 'waybackurls' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/waybackurls.txt")"
-            [[ -f $deep_dir/$domain/waybackurls.txt ]] && mv $deep_dir/$domain/waybackurls.txt $deep_dir/$domain/waybackurls.old
         
-            waybackurls $full_domain | tee $deep_dir/$domain/waybackurls.txt
+            waybackurls $full_domain | tee $deep_dir/$domain/new_waybackurls.txt
 
             if [[ $(cat $deep_dir/$domain/waybackurls.txt) ]]; then
                 send_to_discord "\`waybackurls\` results:" $deep_domain_webhook $deep_dir/$domain/waybackurls.txt
-            elif [[ $(cat $deep_dir/$domain/waybackurls.old) ]]; then
-                my_diff $deep_dir/$domain/waybackurls.old $deep_dir/$domain/waybackurls.txt "waybackurls" $deep_domain_webhook
+                my_diff $deep_dir/$domain/waybackurls.txt $deep_dir/$domain/new_waybackurls.txt "waybackurls" $deep_domain_webhook
             else
                 print_warning "No findings from 'waybackurls'"
                 send_to_discord "*No findings from \`waybackurls\`*" $deep_domain_webhook
@@ -824,13 +811,12 @@ deep_domain_recon() {
             print_task "Running 'feroxbuster' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/feroxbuster.txt")"
             [[ -f $deep_dir/$domain/feroxbuster.txt ]] && mv $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/feroxbuster.old
         
-            feroxbuster -a "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36t" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/feroxbuster.txt
+            feroxbuster -a "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36t" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/new_feroxbuster.txt
             echo ""
 
             if [[ $(cat $deep_dir/$domain/feroxbuster.txt) ]]; then
-                send_to_discord "\`feroxbuster\` results:" $deep_domain_webhook $deep_dir/$domain/feroxbuster.txt
-            elif [[ $(cat $deep_dir/$domain/feroxbuster.old) ]]; then
-                my_diff $deep_dir/$domain/feroxbuster.old $deep_dir/$domain/feroxbuster.txt "feroxbuster" $deep_domain_webhook
+                send_to_discord "\`feroxbuster\` results:" $deep_domain_webhook $deep_dir/$domain/new_feroxbuster.txt
+                my_diff $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/new_feroxbuster.txt "feroxbuster" $deep_domain_webhook
             else
                 print_warning "No results from 'feroxbuster'"
                 send_to_discord "*No results from \`feroxbuster\`*" $deep_domain_webhook
@@ -848,16 +834,14 @@ deep_domain_recon() {
 
             print_task "Runing 'jsleak' on deep domain recon results" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/jsleak.txt")"
 
-            [[ -r $deep_dir/$domain/jsleak.txt ]] || mv $deep_dir/$domain/jsleak.txt $deep_dir/$domain/jsleak.old
+            cat $deep_dir/$domain/combined_deep_live.txt | jsleak -s | tee $deep_dir/$domain/new_jsleak.txt
 
-            cat $deep_dir/$domain/combined_deep_live.txt | jsleak -s | tee jsleak.txt
-
-            if [[ $(cat $deep_dir/$domain/jsleak.old) ]]; then
-                my_diff $deep_dir/$domain/jsleak.old $deep_dir/$domain/jsleak.txt "JSLeak" $deep_domain_webhook
-            elif [[ $(cat $deep_dir/$domain/jsleak.old) ]]; then
+            if [[ $(cat $deep_dir/$domain/jsleak.txt) ]]; then
                 send_to_discord "\`jsleak\` report:" $deep_domain_webhook $deep_dir/$domain/jsleak.txt
+                my_diff $deep_dir/$domain/jsleak.txt $deep_dir/$domain/new_jsleak.txt "JSLeak" $deep_domain_webhook
             else 
                 print_warning "No findings from 'jsleak'"
+                send_to_discord "*No resutls from \`jsleak\`"
             fi
         done
 
@@ -904,17 +888,16 @@ leaks() {
             if [[ $token ]]; then
                 for user in "${users[@]}"; do
                     print_task "Running 'gitrob' on $platform user '$user'" "${red}-->${reset} ./$(realpath --relative-to=. $g_leak_path/)/gitrob_${user}.json"
-                    [[ -r ${g_leak_path}/gitrob_${user}.json ]] && mv ${g_leak_path}/gitrob_${user}.json ${g_leak_path}/gitrob_${user}.json.old
 
                     cd $(dirname $(realpath $(which gitrob)))
 
                     if [[ $platform = "GitHub" ]]; then
-                        gitrob -save ${g_leak_path}/gitrob_${user}.json -mode 2 -exit-on-finish -github-access-token $token $user
+                        gitrob -save ${g_leak_path}/new_gitrob_${user}.json -mode 2 -exit-on-finish -github-access-token $token $user
                     else
-                        gitrob -save ${g_leak_path}/gitrob_${user}.json -mode 2 -exit-on-finish -gitlab-access-token $token $user
+                        gitrob -save ${g_leak_path}/new_gitrob_${user}.json -mode 2 -exit-on-finish -gitlab-access-token $token $user
                     fi
                     
-                    my_diff ${g_leak_path}/gitrob_${user}.json.old ${g_leak_path}/gitrob_${user}.json "gitrob ($user)" $leaks_webhook
+                    my_diff ${g_leak_path}/gitrob_${user}.json.json ${g_leak_path}/new_gitrob_${user}.json "gitrob ($user)" $leaks_webhook
                     
                     cd - &> /dev/null
 
@@ -927,10 +910,9 @@ leaks() {
                     else
                         print_task "'gitrob' findings on $platform user '$user'" "${red}-->${reset} ./$(realpath --relative-to=. "${g_leak_path}"/)/gitrob_${user}_findings.json"
 
-                        [[ -r ${g_leak_path}/gitrob_${user}_findings.json ]] && mv "${g_leak_path}/gitrob_${user}_findings.json" "${g_leak_path}/gitrob_${user}_findings.json.old"
-                        echo $findings | jq . | tee ${g_leak_path}/gitrob_${user}_findings.json
+                        echo $findings | jq . | tee ${g_leak_path}/new_gitrob_${user}_findings.json
 
-                        my_diff ${g_leak_path}/gitrob_${user}_findings.json.old ${g_leak_path}/gitrob_${user}_findings.json "gitrob ($user)" $leaks_webhook
+                        my_diff ${g_leak_path}/gitrob_${user}_findings.json ${g_leak_path}/new_gitrob_${user}_findings.json "gitrob ($user)" $leaks_webhook
                     fi
                 done
 
@@ -940,7 +922,6 @@ leaks() {
                     filename="$(echo trufflehog_$(echo $repo | awk -F "/" '{print $(NF-1)"_"$NF}')).json"
 
                     print_task "Running 'trufflehog' on $platform repo '$repo'" "${red}-->${reset} ./$(realpath --relative-to=. $g_leak_path/)/$filename"
-                    [[ -r $g_leak_path/$filename ]] && mv "$g_leak_path/$filename" "$g_leak_path/${filename}.old"
 
                     if [[ $platform = "GitHub" ]]; then
                         trufflehog_report=$(trufflehog github --token=$token --repo=$repo -j | jq .)
@@ -951,8 +932,8 @@ leaks() {
                     if [[ ! $trufflehog_report || $trufflehog_report = "null" ]]; then
                         print_warning "No report from trufflehog"
                     else
-                        echo "$trufflehog_report" | jq . | tee "$g_leak_path/$filename"
-                        my_diff "${g_leak_path}/${filename}.old" "${g_leak_path}/$filename" "trufflehog ($repo)" $leaks_webhook
+                        echo "$trufflehog_report" | jq . | tee "$g_leak_path/new_$filename"
+                        my_diff "${g_leak_path}/${filename}" "${g_leak_path}/new_$filename" "trufflehog ($repo)" $leaks_webhook
                     fi
                 done
             else
@@ -2215,7 +2196,7 @@ flags() {
 }
 
 depend() {
-    dependencies=("discord.sh" "colordiff" "crt.sh" "subfinder" "github-subdomains" "httpx" "puredns" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "jsleak" "dnsreaper" "bat" "nuclei" "ping")
+    dependencies=("discord.sh" "crt.sh" "subfinder" "github-subdomains" "httpx" "puredns" "subdomainizer" "goaltdns" "anew" "gowitness" "whois" "shodan" "nmap" "waybackurls" "feroxbuster" "gitrob" "trufflehog" "jq" "jsleak" "dnsreaper" "bat" "nuclei" "ping")
     missing_depends=()
     
     for dependency in "${dependencies[@]}"; do
@@ -2253,10 +2234,10 @@ depend() {
                 sudo ln -s $HOME/.mcr_depend/discord.sh/discord.sh /usr/bin/discord.sh
             fi
 
-            if [[ ! $(which colordiff) ]]; then
-                print_message "Installing:" "colordiff"
-                sudo apt install colordiff
-            fi    
+            # if [[ ! $(which colordiff) ]]; then
+            #     print_message "Installing:" "colordiff"
+            #     sudo apt install colordiff
+            # fi    
 
             if [[ ! $(which ping) ]]; then
                 print_message "Installing:" "ping"
