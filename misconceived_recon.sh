@@ -442,7 +442,7 @@ subdomain_recon() {
     sort -u $subdomain_dir/github_subdomain_unsorted.txt | grep -v "error occurred:" > $subdomain_dir/new_github_subdomains.txt
     rm $subdomain_dir/github_subdomain_unsorted.txt
 
-    my_diff $subdomain_dir/github-subdomains.txt $subdomain_dir/new_github-subdomains.txt "github-subdomains"
+    my_diff $subdomain_dir/github_subdomains.txt $subdomain_dir/new_github_subdomains.txt "github-subdomains"
 
     ## Amass (doesn't work with my internet :/)
 
@@ -501,9 +501,7 @@ subdomain_recon() {
     ## Subdomainizer
 
     print_task "Running 'subdomainizer'" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/subdomainizer.txt")"
-    [[ -f $subdomain_dir/subdomainizer.txt ]] && mv $subdomain_dir/subdomainizer.txt $subdomain_dir/subdomainizer.old
-    [[ -f $leaks_dir/subdomainizer_info.txt ]] && mv $leaks_dir/subdomainizer_info.txt $leaks_dir/subdomainizer_info.old
-
+   
     subdomainizer -l $subdomain_dir/combined_first.txt -gt $ghtoken -g -o $subdomain_dir/new_subdomainizer.txt
     grep "Found some secrets(might be false positive)..." -A 10000 subdomainizer.txt | sed '/___End\ of\ Results__/d' > $leaks_dir/new_sssubdomainizer_info.txt
 
