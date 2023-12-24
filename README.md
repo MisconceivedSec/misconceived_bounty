@@ -429,7 +429,7 @@ The following tools are executed:
 5. `subdomainizer.py`
 6. `subfinder` (recursive)
 7. `goaltdns`
-8. `httpx` (Verifies that the subdomains are alive)
+8. `httpx` (Verifies that the subdomains are alive + provides summary on subdomains)
 
 ##### Subdomain Takeover Detection
 
@@ -471,12 +471,11 @@ The `gdork` function generates github dorking links, copies them to the clipboar
 
 # TODO
 
-- [ ] Add web technology fingerprinting to the `fingerprint` function (`httpx`)
 - [ ] Add an option to add custom operations
 - [ ] Add `logs` function so one doesn't have to fiddle with the terribly named log files
 - [ ] Add more `nuclei` vulnerability scans
 - [ ] Add a local registry that contains names of targets as well as their configuration files (maybe a `register` function)
-- [ ] Change the use of `file.old` to `/old/file.txt` - Maybe
+- [x] ~~Add web technology fingerprinting to the `fingerprint` function (`httpx`)~~
 - [x] ~~Use `httpx` for extracting IPs from domains~~
 - [x] ~~Replace `httprobe` with `httpx`~~
 - [x] ~~Change the way the dependecies are checked~~

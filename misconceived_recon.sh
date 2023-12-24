@@ -597,6 +597,15 @@ subdomain_recon() {
         print_warning "Did not find any new subdomains"
     fi
 
+    ## Subdomains Summary (httpx -title -sc -cl -td)
+
+    if [[ $(cat $subdomain_dir/final_live.txt) ]]; then
+        print_task "Summary of Live Subdomains" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/live_summary.txt")"
+
+        httpx -l $subdomain_dir/final_live.txt -title -sc -cl -td -o $subdomain_dir/new_live_summary.txt
+        my_diff $subdomain_dir/live_summary.txt $subdomain_dir/new_live_summary.txt
+    fi
+
     ## DNSReaper Subdomain Takeovers
 
     print_task "Running 'dnsreaper' (subdomain takeover detection)" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/dnsreaper-takeovers.json")"
