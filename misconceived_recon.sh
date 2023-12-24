@@ -610,7 +610,7 @@ subdomain_recon() {
 
     dnsreaper file --filename "$subdomain_dir/final_live.txt" --out-format json --out "$subdomain_dir/new_dnsreaper-takeovers.txt"
 
-    if [[ $(cat "$subdomain_dir/dnsreaper-takeovers.json" 2> /dev/null) ]]; then
+    if [[ $(cat "$subdomain_dir/new_dnsreaper-takeovers.json" 2> /dev/null) ]]; then
         print_message "Report of:" "DNSReaper"
         jq . "$subdomain_dir/dnsreaper-takeovers.json"
 
