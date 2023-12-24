@@ -84,7 +84,6 @@ Parse -h or -help with each mode/function for more information
 
 - [`anew`](https://github.com/tomnomnom/anew)
 - [`bat`](https://github.com/sharkdp/bat)
-- [`colordiff`](https://www.colordiff.org/)
 - [`crt.sh`](https://github.com/MisconceivedSec/crt.sh)
 - [`discord.sh`](https://github.com/fieu/discord.sh)
 - [`dnsreaper`](https://github.com/punk-security/dnsReaper)
