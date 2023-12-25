@@ -135,6 +135,8 @@ Flags:
          Custom task sequence
   -d -deep-domains <domain> <wordlist>
          Domains preform to deep recon on
+  -mu -monitored-urls <url>
+         Url to monitor for changes (Can be called multiple times)
   -ws -subdomain-webhook <url>
          Subdomain Webhook
   -wc -screenshots-webhook <url>
@@ -186,6 +188,8 @@ The other optional arguments are:
    - Custom task sequence
 - `-d -deep-domains domain wordlist`
    - Domains to preform deep recon on
+- `-mu -monitored-urls <url>`
+   - Url to monitor for changes (Can be called multiple times)
 - `-ws -subdomain-webhook url`
    - Subdomain Discord channel webhook
 - `-wc -screenshots-webhook url`
@@ -230,6 +234,8 @@ Flags:
          Change task sequence
   -d -deep-domains <domain> <wordlist>
          Add domains for deep recon
+  -mu -monitored-urls <url>
+         Add url to monitor for changes (Can be called multiple times)
   -ws -subdomain-webhook <url>
          Change Subdomain Webhook
   -wc -screenshots-webhook <url>
@@ -286,6 +292,8 @@ The other optional arguments:
    - Change task sequence
 - `-d -deep-domains domain wordlist`
    - Add domains for deep recon
+- `-mu -monitored-urls <url>`
+   - Add url to monitor for changes (Can be called multiple times)
 - `-ws -subdomain-webhook url`
    - Change Subdomain Discord channel webhook
 - `-wc -screenshots-webhook url`

@@ -182,6 +182,8 @@ help() {
         echo "         Custom task sequence"
         echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist>"
         echo "         Domains preform to deep recon on"        
+        echo "  ${magenta}${bold}-mu -monitored-urls${reset} <url>"
+        echo "         Url to monitor for changes (Can be called multiple times)"        
         echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} <url>"
         echo "         Subdomain Webhook" 
         echo "  ${magenta}${bold}-wc -screenshots-webhook${reset} <url>"
@@ -231,6 +233,8 @@ help() {
         echo "         Change task sequence"
         echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist>"
         echo "         Add domains for deep recon"        
+        echo "  ${magenta}${bold}-mu -monitored-urls${reset} <url>"
+        echo "         Add url to monitor for changes (Can be called multiple times)"
         echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} <url>"
         echo "         Change Subdomain Webhook"      
         echo "  ${magenta}${bold}-wc -screenshots-webhook${reset} <url>"
@@ -639,6 +643,20 @@ subdomain_recon() {
     else
         print_warning "No findings from Nuclei"
         send_to_discord "*No findings from Nuclei subdomain takeover detector*"  $subdomain_webhook
+    fi
+
+    ## Monitored URLs
+
+    if [[ $monitored_urls ]]; then
+        print_task "Scanning monitored URLs" "${red}-->${reset} ./$(realpath --relative-to="." "$subdomain_dir/monitored_urls.txt")"
+
+        echo "${monitored_urls[@]}" | sed 's/\ /\n/g' | httpx -title -sc -cl -td -o $subdomain_dir/new_monitored_urls.txt
+
+        if [[ ! -r $subdomain_dir/monitored_urls.txt ]]; then
+            send_to_discord "Monitored URLs report:" "$subdomain_webhook" "$subdomain_dir/monitored_urls.txt"
+        fi
+
+        my_diff $subdomain_dir/monitored_urls.txt $subdomain_dir/new_monitored_urls.txt "Monitored URLs" $subdomain_webhook
     fi
 
     ## Time Taken
@@ -1073,6 +1091,12 @@ init() {
         send_to_discord "_**INIT:** Will use this channel for logs output_" $input_logs_webhook
     fi
 
+    ## Monitored Files
+
+    if [[ $input_monitored_urls ]]; then
+        monitored_urls=$(echo "\"${input_monitored_urls[*]}\"" | sed "s/\ /\",\ \"/g")
+    fi
+
     ## Create Directories
 
     recon_dir="$path/${input_target}-recon"
@@ -1124,6 +1148,9 @@ init() {
         ],
         \"deep_domains\": [ 
             $deep_domains_json
+        ],
+        \"monitored_urls\": [
+            $monitored_urls
         ],
         \"git\": { 
             \"token\": { 
@@ -1324,7 +1351,7 @@ config() {
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
-    ## Add Fuzz Domains
+    ## Add Deep Domains
 
     if [[ "${input_deep_domains[*]}" && "${input_fuzz_wordlist[*]}" ]]; then
 
@@ -1368,6 +1395,13 @@ config() {
         gitlab_recon_json=$(echo \"$input_gitlab_recon\" | sed "s/,/\",\ \"/g")
 
         jq ".config.git.gitlab_recon += [ $gitlab_recon_json ]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
+        mv "${tmp_config_file}.tmp" "${tmp_config_file}"
+    fi
+
+    ## Add monitored files
+
+    if [[ $input_monitored_urls ]]; then
+        jq '.config.monitored_urls += [ $monitored_urls ]' "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
@@ -1634,6 +1668,15 @@ flags() {
                         fi
                         shift
                         ;;
+                    -mu|-monitored-urls)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_monitored_urls+=("$1")
+                        else
+                            print_error "-mu|-monitored-urls requires an argument!"
+                        fi
+                        shift
+                        ;;
                     -ght|-github-token)
                         shift
                         if [[ "$1" != -?* ]]; then
@@ -1827,6 +1870,15 @@ flags() {
                             input_provided_subdomains="$1"
                         else
                             print_error "-ps|-provided-subdomains requires a valid path!"
+                        fi
+                        shift
+                        ;;
+                    -mu|-monitored-urls)
+                        shift
+                        if [[ "$1" != -?* ]]; then
+                            input_monitored_urls+=("$1")
+                        else
+                            print_error "-mu|-monitored-urls requires an argument!"
                         fi
                         shift
                         ;;
