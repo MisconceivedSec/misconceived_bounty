@@ -1402,7 +1402,9 @@ config() {
     ## Add monitored files
 
     if [[ $input_monitored_urls ]]; then
-        jq '.config.monitored_urls += [ $monitored_urls ]' "${tmp_config_file}" > "${tmp_config_file}.tmp"
+        monitored_urls=$(echo "\"${input_monitored_urls[*]}\"" | sed "s/\ /\",\ \"/g")
+
+        jq ".config.monitored_urls += [ $monitored_urls ]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
         mv "${tmp_config_file}.tmp" "${tmp_config_file}"
     fi
 
@@ -2290,7 +2292,7 @@ depend() {
         print_message "Would you like to install the dependecies?"
         prompt "[y/N]:"
         
-        if [[ $userinput = "y" || $userinput = "Y" ]]; then
+        if [[ $userinput =~ (y|Y) ]]; then
             print_message "Preparing for installations"
             sudo apt update
 
@@ -2492,7 +2494,7 @@ depend() {
 
 flags "$@"
 
-[[ $mode = "depend" ]] || depend
+[[ $mode =~ (depend|config|init) ]] || depend
 
 case $mode in
     init) init
