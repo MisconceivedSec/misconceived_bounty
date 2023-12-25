@@ -133,7 +133,7 @@ Flags:
          Path to recon report directory
   -ct -custom-tasks <task[,task,...]>
          Custom task sequence
-  -d -deep-domains <domain> <wordlist>
+  -d -deep-domains <domain> <wordlist> [fuzz flags]
          Domains preform to deep recon on
   -mu -monitored-urls <url>
          Url to monitor for changes (Can be called multiple times)
@@ -232,7 +232,7 @@ Flags:
          Add GitLab Repos to enumerate
   -a -attack-method <task[,task,...]>
          Change task sequence
-  -d -deep-domains <domain> <wordlist>
+  -d -deep-domains <domain> <wordlist> [fuzz flags]
          Add domains for deep recon
   -mu -monitored-urls <url>
          Add url to monitor for changes (Can be called multiple times)

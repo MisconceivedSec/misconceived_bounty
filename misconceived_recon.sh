@@ -180,8 +180,8 @@ help() {
         echo "         Path to recon report directory"
         echo "  ${magenta}${bold}-ct -custom-tasks${reset} <task[,task,...]>"
         echo "         Custom task sequence"
-        echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist>"
-        echo "         Domains preform to deep recon on"        
+        echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist> [fuzz flags]"
+        echo "         Domains preform to deep recon on"
         echo "  ${magenta}${bold}-mu -monitored-urls${reset} <url>"
         echo "         Url to monitor for changes (Can be called multiple times)"        
         echo "  ${magenta}${bold}-ws -subdomain-webhook${reset} <url>"
@@ -231,7 +231,7 @@ help() {
         echo "         Add GitLab Repos to enumerate"
         echo "  ${magenta}${bold}-a -attack-method${reset} <task[,task,...]>"
         echo "         Change task sequence"
-        echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist>"
+        echo "  ${magenta}${bold}-d -deep-domains${reset} <domain> <wordlist> [fuzz flags]"
         echo "         Add domains for deep recon"        
         echo "  ${magenta}${bold}-mu -monitored-urls${reset} <url>"
         echo "         Add url to monitor for changes (Can be called multiple times)"
@@ -836,7 +836,7 @@ deep_domain_recon() {
             print_task "Running 'feroxbuster' on '$domain'" "${red}-->${reset} ./$(realpath --relative-to="." "$deep_dir/$domain/feroxbuster.txt")"
             [[ -f $deep_dir/$domain/feroxbuster.txt ]] && mv $deep_dir/$domain/feroxbuster.txt $deep_dir/$domain/feroxbuster.old
         
-            feroxbuster -a "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36t" -u $full_domain -t 20 -L 20 -w $wordlist -o $deep_dir/$domain/new_feroxbuster.txt
+            feroxbuster -a "$uaa Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36t" -u $full_domain -w $wordlist -o $deep_dir/$domain/new_feroxbuster.txt $([[ $fuzz_flags = "none" ]] || echo $fuzz_flags)
             echo ""
 
             if [[ $(cat $deep_dir/$domain/feroxbuster.txt) ]]; then
@@ -1057,9 +1057,9 @@ init() {
 
     ## Deep Domains
 
-    if [[ ${input_deep_domains[*]} && ${input_fuzz_wordlist[*]} ]]; then
+    if [[ ${input_deep_domains[*]} && ${input_fuzz_wordlist[*]} && ${input_fuzz_flags[*]} ]]; then
         deep_domains_json="$(echo "$(for i in "${!input_deep_domains[@]}"; do
-                                 echo -n "{\"domain\": \"${input_deep_domains[$i]}\",\"wordlist\": \"${input_fuzz_wordlist[$i]}\"}"
+                                 echo -n "{\"domain\": \"${input_deep_domains[$i]}\",\"wordlist\": \"${input_fuzz_wordlist[$i]}\",\"fuzz_flags\": \"${input_fuzz_flags[$i]}\"}"
                              done)" | sed "s/}{/},{/g")"
     fi
 
@@ -1353,12 +1353,13 @@ config() {
 
     ## Add Deep Domains
 
-    if [[ "${input_deep_domains[*]}" && "${input_fuzz_wordlist[*]}" ]]; then
+    if [[ "${input_deep_domains[*]}" && "${input_fuzz_wordlist[*]}" && "${input_fuzz_flags[*]}" ]]; then
 
         for i in "${!input_deep_domains[@]}"; do
             jq ".config.deep_domains += [{
                                             domain: \"${input_deep_domains[$i]}\",
-                                            wordlist: \"${input_fuzz_wordlist[$i]}\" 
+                                            wordlist: \"${input_fuzz_wordlist[$i]}\",
+                                            fuzz_flags: \"${input_fuzz_flags[$i]}\"
                                         }]" "${tmp_config_file}" > "${tmp_config_file}.tmp"
             mv "${tmp_config_file}.tmp" "${tmp_config_file}"
         done
@@ -1544,6 +1545,7 @@ init_vars() {
     provided_subdomains=$(jq -r '.config.provided_subdomains' $config_file)
     scope_regex=$(jq -r '.config.scope_regex' $config_file)
     brute_wordlists=($(jq -r '.config.subdomain_brute_wordlist[]' $config_file))
+    monitored_urls=($(jq -r '.config.monitored_urls[]' $config_file))
 
     ghtoken=$(jq -r '.config.git.token.github' $config_file)
     gltoken=$(jq -r '.config.git.token.gitlab' $config_file)
@@ -1552,6 +1554,7 @@ init_vars() {
 
     deep_domains=($(jq -r '.config.deep_domains[].domain' $config_file))
     fuzz_wordlist=($(jq -r '.config.deep_domains[].wordlist' $config_file))
+    fuzz_flags=($(jq -r '.config.deep_domains[].fuzz_flags' $config_file))
 
     attack_method=($(jq -r '.config.attack_method[]' $config_file))
     recon_dir=$(jq -r '.config.recon_path' $config_file)
@@ -1808,8 +1811,14 @@ flags() {
                         if [[ "$1" && -r "$2" ]]; then
                             input_deep_domains+=("$1")
                             input_fuzz_wordlist+=("$2")
+                            if [[ "$3" && "$3" != -?* ]]; then
+                                input_fuzz_flags+=("$3")
+                                shift
+                            else
+                                input_fuzz_flags+=("none")
+                            fi
                         else
-                            print_error "-d|-deep-domains requires a domain and a valid path!"
+                            print_error "-d|-deep-domains requires at least a domain and a valid path!"
                         fi
                         shift 2
                         ;;
@@ -1841,8 +1850,14 @@ flags() {
                         if [[ "$1" && -r "$2" ]]; then
                             input_deep_domains+=("$1")
                             input_fuzz_wordlist+=("$2")
+                            if [[ "$3" && "$3" != -?* ]]; then
+                                input_fuzz_flags+=("$3")
+                                shift
+                            else
+                                input_fuzz_flags+=("none")
+                            fi
                         else
-                            print_error "-d|-deep-domains requires a domain and a valid path!"
+                            print_error "-d|-deep-domains requires at least a domain and a valid path!"
                         fi
                         shift 2
                         ;;
