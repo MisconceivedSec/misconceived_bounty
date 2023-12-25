@@ -58,17 +58,24 @@ Main features:
 
 ## Usage:
 ```bash
+   __  ___ ___
+  /  |/  // _ \  MisconceivedRecon
+ / /|_/ // , _/  Mr. Misconception
+/_/  /_//_/|_|
+
+
 Usage: ./misconceived_recon.sh MODE [OPTIONS]
-Version: 2.3
+Version: 2.10
 
 Modes:
     help   => Print this help message
     init   => Initiate configuration for recon on target
     config => Modify configuration of specific target
     recon  => Run recon based on configuration file
-    report => Show reports and sub-reports of enumeration tasks
+    report => Show reports and subreports of enumeration tasks
 
 Functions:
+    depend      => Check for dependencies and install them
     subdomain   => Subdomain Recon
     screenshot  => Screenshots of Subdomains
     fingerprint => Fingerprint/Service Scan
@@ -476,6 +483,10 @@ It runs the following tools:
 ### `gdork`
 
 The `gdork` function generates github dorking links, copies them to the clipboard, and stores them to `$recon_dir/github_dorking_links.txt`
+
+### `depend` (beta)
+
+The `depend` function looks for and installs required dependencies (on Debian systems) - still in development
 
 # TODO
 

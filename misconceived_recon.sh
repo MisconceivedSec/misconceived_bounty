@@ -15,7 +15,7 @@ underline=$'\e[4m'
 reset=$'\e[0m'
 
 default_tasks=("subdomain" "screenshot" "fingerprint" "deep_domains" "leaks")
-version="2.3"
+version="2.10"
 
 ## Functions
 
