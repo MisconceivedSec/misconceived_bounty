@@ -487,6 +487,9 @@ The `depend` function looks for and installs required dependencies (on Debian sy
 
 # TODO
 
+- [ ] Replace `json` with `yaml`
+- [ ] Update `gowitness` to utilize new `--screenshot-format` to export images as JPEG to reduce image size
+- [ ] Improve logic of subdomain enumeration, and re-check sources of each tool
 - [ ] Add an option to add custom operations
 - [ ] Add `logs` function so one doesn't have to fiddle with the terribly named log files
 - [ ] Add more `nuclei` vulnerability scans
